@@ -1,0 +1,10 @@
+# Deploy do totem (Vite/PWA) no Netlify.
+[build]
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+# SPA/PWA: qualquer rota cai no index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
