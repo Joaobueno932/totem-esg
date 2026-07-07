@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  /* paleta de dados validada (scripts/validate_palette.js — todos os checks PASS) */
+  --series-green: #14805a;
+  --series-blue: #2a78d6;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+}
+
+body { background: #f4f6f5; color: var(--ink); }
+
+/* impressão do relatório: esconde navegação e filtros */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .print-page { box-shadow: none !important; border: none !important; }
+}
