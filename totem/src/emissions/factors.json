@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0-2026.07",
+  "note": "Cópia local (embarcada no app) da base versionada de fatores de emissão. Deve ser mantida em sincronia com backend/seeds/emission_factors.json. O motor de cálculo é 100% local: nenhuma chamada externa é feita durante o preenchimento.",
+  "factors": [
+    { "mode": "carro", "fuel_type": "gasolina", "factor_kg_co2e_per_km": 0.187, "factor_basis": "vehicle" },
+    { "mode": "carro", "fuel_type": "etanol", "factor_kg_co2e_per_km": 0.036, "factor_basis": "vehicle" },
+    { "mode": "carro", "fuel_type": "diesel", "factor_kg_co2e_per_km": 0.201, "factor_basis": "vehicle" },
+    { "mode": "carro", "fuel_type": "gnv", "factor_kg_co2e_per_km": 0.152, "factor_basis": "vehicle" },
+    { "mode": "carro", "fuel_type": "flex", "factor_kg_co2e_per_km": 0.126, "factor_basis": "vehicle" },
+    { "mode": "carro", "fuel_type": "outro", "factor_kg_co2e_per_km": 0.187, "factor_basis": "vehicle" },
+    { "mode": "moto", "fuel_type": "gasolina", "factor_kg_co2e_per_km": 0.071, "factor_basis": "vehicle" },
+    { "mode": "moto", "fuel_type": "etanol", "factor_kg_co2e_per_km": 0.016, "factor_basis": "vehicle" },
+    { "mode": "moto", "fuel_type": "flex", "factor_kg_co2e_per_km": 0.049, "factor_basis": "vehicle" },
+    { "mode": "moto", "fuel_type": "outro", "factor_kg_co2e_per_km": 0.071, "factor_basis": "vehicle" },
+    { "mode": "van", "fuel_type": "diesel", "factor_kg_co2e_per_km": 0.278, "factor_basis": "vehicle" },
+    { "mode": "van", "fuel_type": "gasolina", "factor_kg_co2e_per_km": 0.295, "factor_basis": "vehicle" },
+    { "mode": "van", "fuel_type": "outro", "factor_kg_co2e_per_km": 0.278, "factor_basis": "vehicle" },
+    { "mode": "aplicativo_taxi", "fuel_type": "gasolina", "factor_kg_co2e_per_km": 0.187, "factor_basis": "vehicle" },
+    { "mode": "aplicativo_taxi", "fuel_type": "etanol", "factor_kg_co2e_per_km": 0.036, "factor_basis": "vehicle" },
+    { "mode": "aplicativo_taxi", "fuel_type": "gnv", "factor_kg_co2e_per_km": 0.152, "factor_basis": "vehicle" },
+    { "mode": "aplicativo_taxi", "fuel_type": "flex", "factor_kg_co2e_per_km": 0.126, "factor_basis": "vehicle" },
+    { "mode": "aplicativo_taxi", "fuel_type": "outro", "factor_kg_co2e_per_km": 0.187, "factor_basis": "vehicle" },
+    { "mode": "onibus", "fuel_type": null, "factor_kg_co2e_per_km": 0.027, "factor_basis": "passenger" },
+    { "mode": "aviao", "fuel_type": null, "factor_kg_co2e_per_km": 0.158, "factor_basis": "passenger" },
+    { "mode": "bicicleta_pe", "fuel_type": null, "factor_kg_co2e_per_km": 0, "factor_basis": "passenger" },
+    { "mode": "outro", "fuel_type": null, "factor_kg_co2e_per_km": 0.1, "factor_basis": "passenger" }
+  ]
+}
