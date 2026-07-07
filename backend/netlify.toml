@@ -1,0 +1,25 @@
+# Configuração de deploy do backend (API) como site standalone no Netlify.
+[build]
+  command = "npm ci && npm run netlify:build"
+  functions = "netlify/functions"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = [
+    "express",
+    "pg",
+    "bcryptjs",
+    "jsonwebtoken",
+    "zod",
+    "cors",
+    "express-rate-limit",
+    "serverless-http"
+  ]
+
+# Encaminha todas as chamadas /api/* para a Function que roda o Express.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true

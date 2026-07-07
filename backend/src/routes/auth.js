@@ -1,17 +1,15 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { signToken } from '../middleware/auth.js';
+import { createRateLimiter } from '../rate-limit.js';
 
 export const authRouter = Router();
 
-const loginLimiter = rateLimit({
+const loginLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: 'Muitas tentativas de login. Tente novamente mais tarde.' },
 });
 
