@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import CITIES_BY_UF from '../data/cities.json';
 
-const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const UFS = Object.keys(CITIES_BY_UF);
 
 export default function ParticipantForm({ initial, onNext, onBack }) {
   const [form, setForm] = useState(initial || {
@@ -9,17 +10,22 @@ export default function ParticipantForm({ initial, onNext, onBack }) {
   });
   const [errors, setErrors] = useState({});
 
+  const cities = CITIES_BY_UF[form.state] || [];
+
   const set = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  // Trocar a UF invalida a cidade escolhida para a UF anterior.
+  const setState = (e) => setForm((f) => ({ ...f, state: e.target.value, city: '' }));
+
   function validate() {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Informe seu nome';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Informe um e-mail válido';
-    if (!form.city.trim()) errs.city = 'Informe sua cidade';
     if (!form.state) errs.state = 'Selecione o estado';
+    else if (!form.city) errs.city = 'Selecione sua cidade';
     if (!form.consent_lgpd) errs.consent_lgpd = 'É necessário aceitar para continuar';
     return errs;
   }
@@ -66,18 +72,21 @@ export default function ParticipantForm({ initial, onNext, onBack }) {
       </label>
 
       <div className="row">
-        <label className="grow">
-          Cidade de origem*
-          <input value={form.city} onChange={set('city')} autoComplete="off" maxLength={120} />
-          {errors.city && <span className="error">{errors.city}</span>}
-        </label>
         <label className="uf">
           Estado*
-          <select value={form.state} onChange={set('state')}>
+          <select value={form.state} onChange={setState}>
             <option value="">UF</option>
             {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
           </select>
           {errors.state && <span className="error">{errors.state}</span>}
+        </label>
+        <label className="grow">
+          Cidade de origem*
+          <select value={form.city} onChange={set('city')} disabled={!form.state}>
+            <option value="">{form.state ? 'Selecione a cidade' : 'Selecione o estado primeiro'}</option>
+            {cities.map((city) => <option key={city} value={city}>{city}</option>)}
+          </select>
+          {errors.city && <span className="error">{errors.city}</span>}
         </label>
       </div>
 

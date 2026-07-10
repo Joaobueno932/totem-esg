@@ -78,10 +78,11 @@ input, select {
   user-select: text;
 }
 input:focus, select:focus { outline: 3px solid var(--green-700); border-color: var(--green-700); }
+select:disabled { background: #eef2ef; color: #7b8a80; }
 
 .row { display: flex; gap: 14px; }
 .grow { flex: 1; }
-.uf { width: 130px; }
+.uf { width: 130px; flex: none; }
 
 .error { color: var(--error); font-size: 1rem; font-weight: 600; }
 
