@@ -2,6 +2,9 @@
 // (expira ao fechar o navegador) e nunca é exposto em URLs.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Base do totem, usada para montar o link/QR de cada evento (base + '/' + slug).
+export const TOTEM_URL = (import.meta.env.VITE_TOTEM_URL || 'https://totem-esg-totem.netlify.app').replace(/\/$/, '');
+
 export function getToken() {
   return sessionStorage.getItem('cz-token');
 }
@@ -18,6 +21,10 @@ export function clearSession() {
 
 export function getAdmin() {
   try { return JSON.parse(sessionStorage.getItem('cz-admin')); } catch { return null; }
+}
+
+export function isAdmin() {
+  return getAdmin()?.role === 'admin';
 }
 
 export async function api(path, options = {}) {

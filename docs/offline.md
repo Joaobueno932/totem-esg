@@ -56,8 +56,8 @@ Regras:
 ## Monitoramento
 
 - **No totem**: a tela inicial mostra o estado da conexão e quantas respostas
-  aguardam envio; a tela de configuração (7 toques no canto superior esquerdo)
-  tem o botão "Sincronizar agora".
+  aguardam envio. A fila sincroniza sozinha (ao voltar a conexão, a cada 60 s e
+  após cada resposta).
 - **No dashboard**: a página **Sincronização** lista tudo que chegou ao
   servidor (`ok`, `duplicate`, `recalculated`, `error`) com mensagens de erro.
 

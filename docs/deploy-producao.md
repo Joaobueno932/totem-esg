@@ -69,20 +69,29 @@ Todas as plataformas abaixo fazem deploy direto do GitHub.
    | Variável | Valor |
    |---|---|
    | `VITE_API_URL` | a URL da API do passo 2 (ex.: `https://carbono-zero-api.onrender.com`) |
+   | `VITE_TOTEM_URL` | a URL pública do totem (passo 4, ex.: `https://totem-esg-totem.netlify.app`) — usada para montar o link/QR de cada evento |
 
 4. Deploy. Você recebe uma URL tipo `https://carbono-zero-dashboard.vercel.app`.
 
-> A `VITE_API_URL` é lida **no momento do build**. Se mudar a URL da API depois,
-> faça um novo deploy (Redeploy) do dashboard.
+> `VITE_API_URL` e `VITE_TOTEM_URL` são lidas **no momento do build**. Se mudar
+> qualquer uma depois, faça um novo deploy (Redeploy) do dashboard.
 
 ---
 
-## 4. Totem — Vercel (outro projeto)
+## 4. Totem — Vercel/Netlify (outro projeto)
 
 1. **Add New → Project** de novo → mesmo repositório → **Root Directory:** `totem`.
-2. Não precisa de variável de ambiente: o totem descobre a API na tela de
-   configuração (você digita a URL lá dentro no dia do evento).
-3. Deploy. Você recebe uma URL tipo `https://carbono-zero-totem.vercel.app`.
+2. Em **Environment Variables**, adicione:
+
+   | Variável | Valor |
+   |---|---|
+   | `VITE_API_URL` | a mesma URL da API do passo 2 |
+
+   O totem **não tem mais tela de configuração**: a URL da API vem daqui (build)
+   e o **evento vem do próprio link** (ex.: `.../festa-junina`). Cada evento
+   criado no dashboard gera um link + QR code próprios.
+3. Deploy. Você recebe uma URL tipo `https://totem-esg-totem.netlify.app`.
+   Anote essa URL — é o `VITE_TOTEM_URL` do dashboard (passo 3).
 
 ---
 
@@ -99,15 +108,50 @@ Salve — o Render redeploya sozinho. Sem isso, o navegador bloqueia as chamadas
 
 ---
 
+## 5.1. Migrações do banco (importante!)
+
+Sempre que o **esquema** muda (novas colunas/tabelas), é preciso rodar as
+migrações contra o banco de produção **antes** de o backend novo atender:
+
+```
+DATABASE_URL="<sua string do Neon>" npm run migrate
+```
+
+- No **Render com Dockerfile**, o `migrate` já roda no boot — nada a fazer.
+- No **Netlify** (backend como Function, build `npm ci`), o `migrate` **não**
+  roda sozinho: execute o comando acima uma vez após cada deploy que traga
+  migração nova (a pasta `backend/migrations/` mostra o que existe).
+
+> Sintoma de migração pendente: as abas **Dashboard** e **Respostas** dão
+> *"failed to fetch"* (a consulta referencia uma coluna que ainda não existe e
+> a Function cai). Rodar o `migrate` resolve.
+
+---
+
 ## 6. Usar no evento
 
-1. Abra o **dashboard**, faça login, crie o evento e anote o **ID**.
-2. Abra o **totem** com `?config=1`
-   (ex.: `https://carbono-zero-totem.vercel.app/?config=1`), informe o ID do
-   evento e a URL da API. Toque em "Salvar e iniciar".
-3. **Instale o totem no tablet** (menu do navegador → "Instalar app" / "Adicionar
-   à tela inicial") ou abra em modo quiosque. Faça isso **uma vez com internet**
-   para o Service Worker baixar o app — depois ele funciona offline.
+1. Abra o **dashboard**, faça login e **crie o evento**. Opcionalmente envie uma
+   **imagem** — ela aparece na tela inicial do totem.
+2. Na lista de eventos, clique em **Link/QR**: copie o link
+   (ex.: `https://totem-esg-totem.netlify.app/festa-junina`) ou **baixe o QR code**.
+3. Divulgue o QR no evento. Cada participante **escaneia** com o próprio celular,
+   abre o totem já no evento certo, responde e envia. Não é preciso instalar nada.
+
+> Se quiser usar um **tablet como totem fixo**, basta abrir o link do evento nele
+> (ou "Adicionar à tela inicial"). O cálculo é local e a fila sincroniza sozinha.
+
+---
+
+## Usuários e papéis
+
+No menu **Usuários** (visível só para administradores) o admin cria outros
+acessos:
+
+- **Administrador** — cria/edita eventos, gerencia usuários e exporta dados.
+- **Visualizador** — apenas consulta dashboard, leads e respostas.
+
+O primeiro admin é criado pela linha de comando (passo 2, `create-admin`); os
+demais são criados por ele pela tela de Usuários.
 
 ---
 
@@ -137,4 +181,5 @@ hospedado — não é um build separado do projeto.
 - **Banco:** Neon (privado, só a API acessa)
 - **API:** `https://...onrender.com` — recebe sincronização e serve o dashboard
 - **Dashboard:** `https://...vercel.app` — login da equipe
-- **Totem:** `https://...vercel.app` — PWA instalável (ou vira APK via PWABuilder)
+- **Totem:** `https://...netlify.app` — um link/QR por evento (`.../festa-junina`)
+  que os participantes escaneiam

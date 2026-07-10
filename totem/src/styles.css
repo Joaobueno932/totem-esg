@@ -40,6 +40,13 @@ body {
 h1.event-name { font-size: 2.6rem; color: var(--green-900); line-height: 1.15; }
 h2 { font-size: 2rem; color: var(--green-900); }
 
+.event-image {
+  max-width: min(100%, 420px);
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
 .intro { font-size: 1.35rem; color: var(--muted); max-width: 34ch; line-height: 1.45; }
 
 .badge-leaf { font-size: 4.5rem; }

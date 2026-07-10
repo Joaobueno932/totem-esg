@@ -3,8 +3,7 @@ import StartScreen from './screens/StartScreen.jsx';
 import ParticipantForm from './screens/ParticipantForm.jsx';
 import TransportForm from './screens/TransportForm.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
-import ConfigScreen from './screens/ConfigScreen.jsx';
-import { isConfigured } from './config.js';
+import { getEventSlug, loadEvent } from './config.js';
 import { newLocalUuid, enqueueAnswer, pendingCount } from './db.js';
 import { onSyncChange, trySync } from './sync.js';
 import { computeEmission, CALCULATION_VERSION } from './emissions/calc.js';
@@ -20,8 +19,8 @@ function loadDraft() {
 }
 
 export default function App() {
-  const wantsConfig = new URLSearchParams(window.location.search).has('config');
-  const [showConfig, setShowConfig] = useState(wantsConfig || !isConfigured());
+  // o evento vem do slug na URL (ex.: totem.app/festa-junina)
+  const [eventState, setEventState] = useState({ status: 'loading' });
 
   // rascunho persistido: se a página recarregar no meio do fluxo, o participante não perde o que digitou
   const draft = loadDraft();
@@ -30,6 +29,15 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [pending, setPending] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const slug = getEventSlug();
+    if (!slug) { setEventState({ status: 'no-slug' }); return; }
+    loadEvent(slug).then((r) => {
+      if (r.event) setEventState({ status: 'ready', event: r.event, offline: r.offline });
+      else setEventState({ status: r.error }); // 'not_found' | 'offline'
+    });
+  }, []);
 
   useEffect(() => {
     const refresh = () => pendingCount().then(setPending);
@@ -76,10 +84,9 @@ export default function App() {
     }));
     const total = Math.round(transports.reduce((sum, t) => sum + t.emission_kg_co2e, 0) * 10000) / 10000;
 
-    const cfg = JSON.parse(localStorage.getItem('carbono-zero-totem-config'));
     await enqueueAnswer({
       local_uuid: newLocalUuid(),
-      event_id: Number(cfg.eventId),
+      event_id: eventState.event.id,
       answered_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       participant,
@@ -101,16 +108,16 @@ export default function App() {
     localStorage.removeItem(DRAFT_KEY);
   }
 
-  if (showConfig) {
-    return <ConfigScreen onDone={() => { setShowConfig(false); window.history.replaceState({}, '', window.location.pathname); }} />;
+  if (eventState.status !== 'ready') {
+    return <EventGate status={eventState.status} />;
   }
 
   return (
     <div className="app">
       {step === 'start' && (
         <StartScreen
+          event={eventState.event}
           onStart={handleStart}
-          onSecretConfig={() => setShowConfig(true)}
           pending={pending}
           online={online}
         />
@@ -122,6 +129,35 @@ export default function App() {
         <TransportForm onSubmit={handleTransport} onBack={() => setStep('participant')} />
       )}
       {step === 'result' && <ResultScreen result={result} onFinish={handleFinish} />}
+    </div>
+  );
+}
+
+// Tela mostrada quando o evento não pôde ser carregado do link.
+function EventGate({ status }) {
+  const messages = {
+    loading: { icon: '⏳', title: 'Carregando…', text: '' },
+    'no-slug': {
+      icon: '🔗', title: 'Abra o link do evento',
+      text: 'Use o link/QR gerado para o evento (ex.: .../festa-junina).',
+    },
+    not_found: {
+      icon: '🔍', title: 'Evento não encontrado',
+      text: 'Este link não corresponde a nenhum evento. Confira o QR code com a organização.',
+    },
+    offline: {
+      icon: '📡', title: 'Sem conexão',
+      text: 'Não foi possível carregar o evento e não há dados salvos deste link. Conecte-se à internet uma vez e recarregue.',
+    },
+  };
+  const m = messages[status] || messages.offline;
+  return (
+    <div className="app">
+      <div className="screen center">
+        <div className="badge-leaf">{m.icon}</div>
+        <h2>{m.title}</h2>
+        {m.text && <p className="intro">{m.text}</p>}
+      </div>
     </div>
   );
 }

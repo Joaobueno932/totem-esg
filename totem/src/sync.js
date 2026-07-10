@@ -2,7 +2,7 @@
 // Dispara: ao voltar a conexão (evento 'online'), a cada 60 s e após cada resposta.
 // Falhou? Os dados continuam em IndexedDB e serão reenviados depois.
 import { getPending, markSynced, purgeOldSynced } from './db.js';
-import { getConfig } from './config.js';
+import { getApiUrl } from './config.js';
 
 let syncing = false;
 const listeners = new Set();
@@ -18,7 +18,7 @@ function notify() {
 
 export async function trySync() {
   if (syncing || !navigator.onLine) return;
-  const { apiUrl } = getConfig();
+  const apiUrl = getApiUrl();
   if (!apiUrl) return;
 
   syncing = true;
@@ -27,7 +27,7 @@ export async function trySync() {
     if (pending.length === 0) return;
 
     const answers = pending.map(({ status, synced_at, ...payload }) => payload);
-    const res = await fetch(`${apiUrl.replace(/\/$/, '')}/api/sync/answers`, {
+    const res = await fetch(`${apiUrl}/api/sync/answers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answers }),

@@ -13,6 +13,14 @@ export function requireAuth(req, res, next) {
   }
 }
 
+// Restringe a ação a administradores. 'viewer' só consulta (GETs de leitura).
+export function requireAdmin(req, res, next) {
+  if (req.admin?.role !== 'admin') {
+    return res.status(403).json({ error: 'Ação restrita a administradores' });
+  }
+  next();
+}
+
 export function signToken(admin) {
   return jwt.sign(
     { sub: admin.id, email: admin.email, name: admin.name, role: admin.role },

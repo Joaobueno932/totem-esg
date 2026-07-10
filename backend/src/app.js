@@ -5,6 +5,7 @@ import { createRateLimiter } from './rate-limit.js';
 import { syncRouter } from './routes/sync.js';
 import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
+import { publicRouter } from './routes/public.js';
 
 export function createApp() {
   const app = express();
@@ -13,7 +14,8 @@ export function createApp() {
   // cabeçalho X-Forwarded-For. Sem isto, req.ip fica indefinido e o express-rate-limit
   // lança erro. Em dev (sem proxy) o Express usa o IP do socket normalmente.
   app.set('trust proxy', true);
-  app.use(express.json({ limit: '1mb' }));
+  // 3mb acomoda a imagem base64 do evento (limitada a ~1,5 MB) enviada pelo dashboard.
+  app.use(express.json({ limit: '3mb' }));
   app.use(cors({
     origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
   }));
@@ -27,6 +29,9 @@ export function createApp() {
     message: { error: 'Limite de requisições atingido. Tente novamente em instantes.' },
   });
   app.use('/api/sync', syncLimiter, syncRouter);
+
+  // rotas públicas do totem (resolver evento pelo slug) — mesmo limite de sync
+  app.use('/api/public', syncLimiter, publicRouter);
 
   app.use('/api/admin', authRouter);   // /api/admin/login (público, com limite próprio)
   app.use('/api/admin', adminRouter);  // demais rotas exigem JWT

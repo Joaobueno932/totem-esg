@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { withTransaction, query } from '../db.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 import {
   loadActiveFactors, computeEmission, VALID_MODES, VALID_FUELS, MODES_WITH_FUEL,
 } from '../services/emissions.js';
@@ -48,7 +49,7 @@ function normalizeLegacy(raw) {
 }
 
 // POST /api/sync/answers — recebe um lote de respostas do totem (idempotente por local_uuid)
-syncRouter.post('/answers', async (req, res) => {
+syncRouter.post('/answers', asyncHandler(async (req, res) => {
   const body = Array.isArray(req.body?.answers) ? req.body.answers : null;
   if (!body || body.length === 0 || body.length > 100) {
     return res.status(400).json({ error: 'Envie { answers: [...] } com 1 a 100 itens' });
@@ -143,13 +144,13 @@ syncRouter.post('/answers', async (req, res) => {
   }
 
   res.json({ results });
-});
+}));
 
 // GET /api/sync/factors — permite ao totem atualizar sua base local quando houver internet
-syncRouter.get('/factors', async (_req, res) => {
+syncRouter.get('/factors', asyncHandler(async (_req, res) => {
   const factors = await loadActiveFactors();
   res.json({ version: factors[0]?.version || null, factors });
-});
+}));
 
 // soma de valores já arredondados a 4 casas pode carregar ruído de ponto flutuante
 function round4(n) {

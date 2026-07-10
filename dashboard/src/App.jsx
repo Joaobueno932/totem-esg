@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import { getToken, getAdmin, clearSession } from './api.js';
+import { getToken, getAdmin, isAdmin, clearSession } from './api.js';
 import LoginPage from './pages/LoginPage.jsx';
 import EventsPage from './pages/EventsPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -7,9 +7,17 @@ import LeadsPage from './pages/LeadsPage.jsx';
 import AnswersPage from './pages/AnswersPage.jsx';
 import ReportPage from './pages/ReportPage.jsx';
 import SyncLogsPage from './pages/SyncLogsPage.jsx';
+import UsersPage from './pages/UsersPage.jsx';
 
 function RequireAuth({ children }) {
   if (!getToken()) return <Navigate to="/login" replace />;
+  return children;
+}
+
+// Rotas restritas a administradores (ex.: gestão de usuários).
+function RequireAdmin({ children }) {
+  if (!getToken()) return <Navigate to="/login" replace />;
+  if (!isAdmin()) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -31,8 +39,12 @@ function Shell({ children }) {
             <NavLink to="/respostas" className={link}>Respostas</NavLink>
             <NavLink to="/relatorio" className={link}>Relatório</NavLink>
             <NavLink to="/sincronizacao" className={link}>Sincronização</NavLink>
+            {admin?.role === 'admin' && <NavLink to="/usuarios" className={link}>Usuários</NavLink>}
           </nav>
-          <span className="text-sm text-emerald-200">{admin?.name}</span>
+          <span className="text-sm text-emerald-200">
+            {admin?.name}
+            {admin?.role === 'viewer' && <span className="ml-1 text-emerald-300/80">(visualizador)</span>}
+          </span>
           <button
             className="text-sm text-emerald-200 hover:text-white"
             onClick={() => { clearSession(); navigate('/login'); }}
@@ -57,6 +69,7 @@ export default function App() {
         <Route path="/respostas" element={<RequireAuth><Shell><AnswersPage /></Shell></RequireAuth>} />
         <Route path="/relatorio" element={<RequireAuth><Shell><ReportPage /></Shell></RequireAuth>} />
         <Route path="/sincronizacao" element={<RequireAuth><Shell><SyncLogsPage /></Shell></RequireAuth>} />
+        <Route path="/usuarios" element={<RequireAdmin><Shell><UsersPage /></Shell></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

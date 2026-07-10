@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { signToken } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 import { createRateLimiter } from '../rate-limit.js';
 
 export const authRouter = Router();
@@ -18,7 +19,7 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-authRouter.post('/login', loginLimiter, async (req, res) => {
+authRouter.post('/login', loginLimiter, asyncHandler(async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'E-mail e senha são obrigatórios' });
 
@@ -32,4 +33,4 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
     token: signToken(admin),
     admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role },
   });
-});
+}));
