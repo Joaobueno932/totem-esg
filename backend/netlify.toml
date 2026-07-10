@@ -1,6 +1,6 @@
 # Configuração de deploy do backend (API) como site standalone no Netlify.
 [build]
-  command = "npm ci && npm run netlify:build"
+  command = "npm ci"
   functions = "netlify/functions"
   publish = "public"
 
