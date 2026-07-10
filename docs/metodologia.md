@@ -24,6 +24,27 @@ veículo compartilhado:  emissão_individual = emissão_do_veículo ÷ nº de pe
 bicicleta / a pé:       emissão_kg_co2e = 0
 ```
 
+## Deslocamentos com mais de um transporte
+
+O participante pode informar até **6 trechos** (ex.: ônibus até o aeroporto →
+avião → app/táxi até o evento). Cada trecho tem seu próprio modal, combustível,
+distância, trajeto e nº de ocupantes, e é calculado pela fórmula acima de forma
+independente:
+
+```
+emissão_da_resposta = Σ emissão_do_trecho
+```
+
+No banco, cada trecho é uma linha de `transport_answers`; todos os trechos de
+uma resposta compartilham o mesmo `local_uuid` e se distinguem pelo `leg_index`.
+Nos indicadores, isso significa que:
+
+- **participantes** são contados por pessoa (`DISTINCT participant_id`), nunca
+  por trecho, e a **emissão média** é por participante;
+- na distribuição **por modal**, quem usou mais de um transporte é contado em
+  cada modal que usou — a soma da coluna pode superar o total de participantes,
+  enquanto a soma das emissões continua fechando com o total do evento.
+
 Cada fator tem uma **base** (`factor_basis`):
 
 - `vehicle` — fator por veículo (carro, moto, van, app/táxi): a emissão do

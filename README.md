@@ -19,7 +19,8 @@ evento Carbono Zero.
    do evento e a URL da API (7 toques no canto superior esquerdo da tela
    inicial ou abrindo o app com `?config=1`).
 2. O participante responde no totem: dados pessoais (com aceite LGPD) e
-   deslocamento (modal, combustível, distância, ida/volta, ocupantes).
+   deslocamento — um ou mais trechos (até 6), cada um com modal, combustível,
+   distância, ida/volta e ocupantes.
 3. O **cálculo é 100% local** (fatores de emissão versionados embarcados no
    app) — funciona sem internet. O participante vê **apenas a própria emissão
    individual** em kg CO₂e e toca em "Finalizar", que limpa a sessão.

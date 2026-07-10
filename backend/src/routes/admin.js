@@ -18,9 +18,10 @@ const eventSchema = z.object({
 });
 
 adminRouter.get('/events', async (_req, res) => {
+  // uma resposta = um local_uuid (pode ter vários trechos de transporte)
   const { rows } = await query(
     `SELECT e.*,
-            (SELECT count(*) FROM transport_answers a WHERE a.event_id = e.id)::int AS answers_count,
+            (SELECT count(DISTINCT a.local_uuid) FROM transport_answers a WHERE a.event_id = e.id)::int AS answers_count,
             COALESCE((SELECT sum(a.emission_kg_co2e) FROM transport_answers a WHERE a.event_id = e.id), 0)::float AS total_co2e
        FROM events e ORDER BY e.start_date DESC NULLS LAST, e.id DESC`
   );
@@ -69,33 +70,40 @@ function buildFilters(q, alias = 'a', pAlias = 'p') {
 
 // ---------- Leads e respostas ----------
 
+// Um lead = um participante. Como ele pode ter vários trechos, os modais viram uma
+// lista e a emissão é a soma dos trechos (filtrados, quando há filtro de modal).
 adminRouter.get('/leads', async (req, res) => {
   const { where, params } = buildFilters(req.query);
   const { rows } = await query(
     `SELECT p.id, p.name, p.company, p.email, p.phone, p.city, p.state,
             p.consent_lgpd, p.consent_marketing, p.created_at,
-            a.transport_mode, a.emission_kg_co2e::float, e.name AS event_name
+            array_agg(a.transport_mode ORDER BY a.leg_index) AS transport_modes,
+            sum(a.emission_kg_co2e)::float AS emission_kg_co2e,
+            e.name AS event_name
        FROM participants p
        JOIN transport_answers a ON a.participant_id = p.id
        JOIN events e ON e.id = p.event_id
        ${where}
+       GROUP BY p.id, e.name
        ORDER BY p.created_at DESC
        LIMIT 5000`, params);
   res.json(rows);
 });
 
+// Aqui cada linha é um TRECHO; legs_count diz de quantos trechos é a resposta.
 adminRouter.get('/answers', async (req, res) => {
   const { where, params } = buildFilters(req.query);
   const { rows } = await query(
-    `SELECT a.id, a.local_uuid, a.transport_mode, a.fuel_type, a.origin_text,
+    `SELECT a.id, a.local_uuid, a.leg_index, a.transport_mode, a.fuel_type, a.origin_text,
             a.distance_km::float, a.round_trip, a.passengers_in_vehicle,
             a.emission_kg_co2e::float, a.calculation_version, a.answered_at, a.synced_at,
+            (SELECT count(*) FROM transport_answers x WHERE x.local_uuid = a.local_uuid)::int AS legs_count,
             p.name AS participant_name, p.company, p.city, p.state, e.name AS event_name
        FROM transport_answers a
        JOIN participants p ON p.id = a.participant_id
        JOIN events e ON e.id = a.event_id
        ${where}
-       ORDER BY a.synced_at DESC
+       ORDER BY a.synced_at DESC, a.local_uuid, a.leg_index
        LIMIT 5000`, params);
   res.json(rows);
 });
@@ -106,20 +114,23 @@ adminRouter.get('/stats', async (req, res) => {
   const { where, params } = buildFilters(req.query);
   const base = `FROM transport_answers a JOIN participants p ON p.id = a.participant_id ${where}`;
 
+  // Cada linha é um trecho de transporte: contagens de gente usam DISTINCT p.id,
+  // e a média é por participante (não por trecho).
   const [totals, byMode, byCity, byCompany, ranking] = await Promise.all([
-    query(`SELECT count(*)::int AS participants,
-                  count(*) FILTER (WHERE p.consent_marketing)::int AS marketing_leads,
-                  COALESCE(sum(a.emission_kg_co2e),0)::float AS total_co2e,
-                  COALESCE(avg(a.emission_kg_co2e),0)::float AS avg_co2e ${base}`, params),
-    query(`SELECT a.transport_mode AS mode, count(*)::int AS participants,
+    query(`SELECT count(DISTINCT p.id)::int AS participants,
+                  count(DISTINCT p.id) FILTER (WHERE p.consent_marketing)::int AS marketing_leads,
+                  COALESCE(sum(a.emission_kg_co2e),0)::float AS total_co2e ${base}`, params),
+    query(`SELECT a.transport_mode AS mode, count(DISTINCT p.id)::int AS participants,
                   COALESCE(sum(a.emission_kg_co2e),0)::float AS co2e
              ${base} GROUP BY 1 ORDER BY co2e DESC`, params),
-    query(`SELECT COALESCE(NULLIF(trim(p.city),''),'Não informado') AS city, count(*)::int AS participants
+    query(`SELECT COALESCE(NULLIF(trim(p.city),''),'Não informado') AS city, count(DISTINCT p.id)::int AS participants
              ${base} GROUP BY 1 ORDER BY participants DESC LIMIT 15`, params),
-    query(`SELECT COALESCE(NULLIF(trim(p.company),''),'Não informado') AS company, count(*)::int AS participants
+    query(`SELECT COALESCE(NULLIF(trim(p.company),''),'Não informado') AS company, count(DISTINCT p.id)::int AS participants
              ${base} GROUP BY 1 ORDER BY participants DESC LIMIT 15`, params),
-    query(`SELECT p.name, p.company, p.city, a.transport_mode, a.emission_kg_co2e::float
-             ${base} ORDER BY a.emission_kg_co2e DESC LIMIT 10`, params),
+    query(`SELECT p.name, p.company, p.city,
+                  array_agg(a.transport_mode ORDER BY a.leg_index) AS transport_modes,
+                  sum(a.emission_kg_co2e)::float AS emission_kg_co2e
+             ${base} GROUP BY p.id ORDER BY sum(a.emission_kg_co2e) DESC LIMIT 10`, params),
   ]);
 
   const t = totals.rows[0];
@@ -129,7 +140,7 @@ adminRouter.get('/stats', async (req, res) => {
       leads: t.participants, // todo participante com consentimento LGPD é um lead
       marketing_leads: t.marketing_leads,
       total_co2e: t.total_co2e,
-      avg_co2e: t.avg_co2e,
+      avg_co2e: t.participants > 0 ? t.total_co2e / t.participants : 0,
       trees_needed: Math.ceil(t.total_co2e / TREES_KG_PER_TREE),
       trees_kg_per_tree: TREES_KG_PER_TREE,
     },
@@ -151,14 +162,15 @@ adminRouter.get('/events/:id/report', async (req, res) => {
   const base = `FROM transport_answers a JOIN participants p ON p.id = a.participant_id ${where}`;
 
   const [totals, byMode, byCity, byCompany, versions] = await Promise.all([
-    query(`SELECT count(*)::int AS participants,
-                  COALESCE(sum(a.emission_kg_co2e),0)::float AS total_co2e,
-                  COALESCE(avg(a.emission_kg_co2e),0)::float AS avg_co2e ${base}`, params),
-    query(`SELECT a.transport_mode AS mode, count(*)::int AS participants,
+    query(`SELECT count(DISTINCT p.id)::int AS participants,
+                  count(DISTINCT a.local_uuid)::int AS valid_answers,
+                  count(*)::int AS legs,
+                  COALESCE(sum(a.emission_kg_co2e),0)::float AS total_co2e ${base}`, params),
+    query(`SELECT a.transport_mode AS mode, count(DISTINCT p.id)::int AS participants,
                   COALESCE(sum(a.emission_kg_co2e),0)::float AS co2e ${base} GROUP BY 1 ORDER BY co2e DESC`, params),
-    query(`SELECT COALESCE(NULLIF(trim(p.city),''),'Não informado') AS city, count(*)::int AS participants
+    query(`SELECT COALESCE(NULLIF(trim(p.city),''),'Não informado') AS city, count(DISTINCT p.id)::int AS participants
              ${base} GROUP BY 1 ORDER BY participants DESC`, params),
-    query(`SELECT COALESCE(NULLIF(trim(p.company),''),'Não informado') AS company, count(*)::int AS participants
+    query(`SELECT COALESCE(NULLIF(trim(p.company),''),'Não informado') AS company, count(DISTINCT p.id)::int AS participants
              ${base} GROUP BY 1 ORDER BY participants DESC`, params),
     query(`SELECT DISTINCT a.calculation_version ${base}`, params),
   ]);
@@ -169,9 +181,10 @@ adminRouter.get('/events/:id/report', async (req, res) => {
     generated_at: new Date().toISOString(),
     totals: {
       participants: t.participants,
-      valid_answers: t.participants,
+      valid_answers: t.valid_answers,
+      transport_legs: t.legs,
       total_co2e: t.total_co2e,
-      avg_co2e: t.avg_co2e,
+      avg_co2e: t.participants > 0 ? t.total_co2e / t.participants : 0,
       trees_needed: Math.ceil(t.total_co2e / TREES_KG_PER_TREE),
     },
     by_mode: byMode.rows,
@@ -201,18 +214,22 @@ function toCsv(rows, columns) {
 adminRouter.get('/export/leads.csv', async (req, res) => {
   const { where, params } = buildFilters(req.query);
   const { rows } = await query(
-    `SELECT p.name, p.company, p.email, p.phone, p.city, p.state,
-            p.consent_marketing, a.transport_mode, a.emission_kg_co2e::float, e.name AS event_name, p.created_at
+    `SELECT p.name, p.company, p.email, p.phone, p.city, p.state, p.consent_marketing,
+            string_agg(a.transport_mode, ' + ' ORDER BY a.leg_index) AS transport_modes,
+            count(*)::int AS transport_legs,
+            sum(a.emission_kg_co2e)::float AS emission_kg_co2e,
+            e.name AS event_name, p.created_at
        FROM participants p
        JOIN transport_answers a ON a.participant_id = p.id
        JOIN events e ON e.id = p.event_id
-       ${where} ORDER BY p.created_at`, params);
+       ${where} GROUP BY p.id, e.name ORDER BY p.created_at`, params);
   const csv = toCsv(rows, [
     { key: 'name', label: 'Nome' }, { key: 'company', label: 'Empresa' },
     { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Telefone' },
     { key: 'city', label: 'Cidade' }, { key: 'state', label: 'Estado' },
     { key: 'consent_marketing', label: 'Aceita comunicações' },
-    { key: 'transport_mode', label: 'Modal' },
+    { key: 'transport_modes', label: 'Modais' },
+    { key: 'transport_legs', label: 'Trechos' },
     { key: 'emission_kg_co2e', label: 'Emissão (kg CO2e)' },
     { key: 'event_name', label: 'Evento' }, { key: 'created_at', label: 'Data' },
   ]);

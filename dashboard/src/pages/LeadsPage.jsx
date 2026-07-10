@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { api, qs, downloadCsv } from '../api.js';
-import { Card, FilterBar, EMPTY_FILTERS, MODE_LABELS, fmt } from '../components/ui.jsx';
+import { Card, FilterBar, EMPTY_FILTERS, modeList, fmt } from '../components/ui.jsx';
 
 export default function LeadsPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -17,7 +17,8 @@ export default function LeadsPage() {
       Nome: l.name, Empresa: l.company || '', 'E-mail': l.email, Telefone: l.phone || '',
       Cidade: l.city || '', Estado: l.state || '',
       'Aceita comunicações': l.consent_marketing ? 'Sim' : 'Não',
-      Modal: MODE_LABELS[l.transport_mode] || l.transport_mode,
+      Modais: modeList(l.transport_modes),
+      Trechos: l.transport_modes?.length ?? 0,
       'Emissão (kg CO2e)': l.emission_kg_co2e,
       Evento: l.event_name, Data: new Date(l.created_at).toLocaleString('pt-BR'),
     }));
@@ -53,7 +54,7 @@ export default function LeadsPage() {
             <thead>
               <tr className="text-left text-(--ink-2) border-b border-(--grid)">
                 <th className="py-2">Nome</th><th>Empresa</th><th>E-mail</th><th>Telefone</th>
-                <th>Cidade/UF</th><th>Comunicações</th><th>Modal</th>
+                <th>Cidade/UF</th><th>Comunicações</th><th>Modais</th>
                 <th className="text-right">kg CO₂e</th><th>Data</th>
               </tr>
             </thead>
@@ -66,7 +67,7 @@ export default function LeadsPage() {
                   <td>{l.phone || '—'}</td>
                   <td>{l.city ? `${l.city}/${l.state || '?'}` : '—'}</td>
                   <td>{l.consent_marketing ? '✅ Sim' : '—'}</td>
-                  <td>{MODE_LABELS[l.transport_mode] || l.transport_mode}</td>
+                  <td>{modeList(l.transport_modes)}</td>
                   <td className="text-right tabular-nums">{fmt(l.emission_kg_co2e)}</td>
                   <td className="whitespace-nowrap">{new Date(l.created_at).toLocaleDateString('pt-BR')}</td>
                 </tr>

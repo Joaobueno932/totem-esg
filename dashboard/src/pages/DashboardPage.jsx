@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { api, qs } from '../api.js';
-import { Card, KpiCard, BarList, FilterBar, EMPTY_FILTERS, MODE_LABELS, fmt } from '../components/ui.jsx';
+import { Card, KpiCard, BarList, FilterBar, EMPTY_FILTERS, MODE_LABELS, modeList, fmt } from '../components/ui.jsx';
 
 export default function DashboardPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
         <Card>
           <h2 className="font-semibold mb-1">Participantes por modal</h2>
-          <p className="text-xs text-(--muted) mb-3">nº de respostas</p>
+          <p className="text-xs text-(--muted) mb-3">quem usou mais de um transporte conta em cada modal</p>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={modeData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="var(--grid)" />
@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-(--ink-2) border-b border-(--grid)">
-              <th className="py-2">#</th><th>Nome</th><th>Empresa</th><th>Cidade</th><th>Modal</th>
+              <th className="py-2">#</th><th>Nome</th><th>Empresa</th><th>Cidade</th><th>Modais</th>
               <th className="text-right">kg CO₂e</th>
             </tr>
           </thead>
@@ -108,7 +108,7 @@ export default function DashboardPage() {
                 <td className="font-medium">{r.name}</td>
                 <td>{r.company || '—'}</td>
                 <td>{r.city || '—'}</td>
-                <td>{MODE_LABELS[r.transport_mode] || r.transport_mode}</td>
+                <td>{modeList(r.transport_modes)}</td>
                 <td className="text-right font-semibold tabular-nums">{fmt(r.emission_kg_co2e)}</td>
               </tr>
             ))}

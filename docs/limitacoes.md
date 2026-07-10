@@ -10,8 +10,9 @@ um inventário auditável de gases de efeito estufa.
   verificação por rota real.
 - **Ocupação do veículo autodeclarada**: o rateio por ocupante depende do
   número informado.
-- **Um único modal por resposta**: trajetos multimodais (ex.: avião + app) são
-  representados pelo modal principal escolhido pelo participante.
+- **Trechos autodeclarados**: trajetos multimodais (ex.: ônibus + avião + app)
+  são informados como até 6 trechos e somados, mas cabe ao participante lembrar
+  de todos eles — trechos curtos costumam ser omitidos.
 - **Sem deduplicação de pessoas**: quem responde duas vezes no totem gera dois
   registros (a deduplicação por UUID evita duplicar *sincronizações*, não
   *pessoas*).

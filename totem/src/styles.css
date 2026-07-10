@@ -151,6 +151,45 @@ select:disabled { background: #eef2ef; color: #7b8a80; }
 
 .zero-note { font-size: 1.4rem; color: var(--green-900); }
 
+.hint { font-size: 1.1rem; color: var(--muted); line-height: 1.4; margin-top: -12px; }
+
+/* ---------- Trechos de transporte já adicionados ---------- */
+.leg-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.leg-item {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--green-100);
+  border: 2px solid var(--green-700);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+}
+.leg-icon { font-size: 2rem; }
+.leg-text { display: flex; flex-direction: column; flex: 1; }
+.leg-text small { color: var(--muted); font-size: 1rem; }
+.leg-remove {
+  width: 56px; height: 56px; flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--green-700);
+  background: #fff;
+  color: var(--green-900);
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-add-leg {
+  border: 2px dashed var(--green-700);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--green-900);
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 18px;
+  min-height: 66px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn-add-leg:disabled { opacity: 0.4; cursor: default; }
+
 /* ---------- Resultado ---------- */
 .result-lead { font-size: 1.4rem; color: var(--muted); }
 .result-value {
@@ -160,6 +199,17 @@ select:disabled { background: #eef2ef; color: #7b8a80; }
   line-height: 1;
 }
 .result-unit { font-size: 1.8rem; font-weight: 700; }
+
+.leg-breakdown { list-style: none; width: 100%; max-width: 380px; }
+.leg-breakdown li {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 10px 0;
+  font-size: 1.15rem;
+  border-bottom: 1px solid var(--green-100);
+}
+.leg-breakdown li:last-child { border-bottom: none; }
+.leg-kg { font-weight: 700; color: var(--green-900); font-variant-numeric: tabular-nums; }
+
 .edu-note { font-size: 1.15rem; color: var(--muted); max-width: 42ch; line-height: 1.5; }
 
 /* ---------- Barra de status offline ---------- */

@@ -18,9 +18,13 @@ Cada resposta finalizada vira um registro na tabela `answers` do banco local
 `carbono-zero-totem`, com:
 
 - `local_uuid` — UUID v4 gerado no dispositivo (chave de deduplicação global);
-- payload completo (participante + transporte + emissão calculada + versão dos
-  fatores);
+- payload completo (participante + lista de trechos de transporte, cada um com
+  sua emissão calculada + versão dos fatores);
 - `status`: `pending` → `synced`.
+
+O backend aceita tanto o formato atual (`transports: [...]`) quanto o antigo
+(`transport: {...}`), então um totem que ficou offline antes da atualização
+sincroniza normalmente a fila que acumulou.
 
 O IndexedDB é persistente: fechar o navegador, recarregar a página ou cair a
 energia **não** apaga a fila. Além disso, o formulário em andamento é salvo em

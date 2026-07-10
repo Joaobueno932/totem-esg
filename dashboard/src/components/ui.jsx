@@ -10,6 +10,12 @@ export function fmt(n, digits = 2) {
   return Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
+// Um participante pode ter vários trechos: "Ônibus + Avião + App/Táxi"
+export function modeList(modes) {
+  if (!modes || modes.length === 0) return '—';
+  return modes.map((m) => MODE_LABELS[m] || m).join(' + ');
+}
+
 export function Card({ children, className = '' }) {
   return (
     <div className={`rounded-xl bg-(--surface) border border-black/10 p-5 ${className}`}>

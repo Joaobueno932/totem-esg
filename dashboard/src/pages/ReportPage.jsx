@@ -61,7 +61,11 @@ export default function ReportPage() {
 
           <section className="grid grid-cols-2 gap-6">
             <Stat label="Total de participantes" value={report.totals.participants.toLocaleString('pt-BR')} />
-            <Stat label="Respostas válidas" value={report.totals.valid_answers.toLocaleString('pt-BR')} />
+            <Stat
+              label="Respostas válidas"
+              value={report.totals.valid_answers.toLocaleString('pt-BR')}
+              hint={`${report.totals.transport_legs.toLocaleString('pt-BR')} trechos de transporte informados`}
+            />
             <Stat label="Emissão total estimada" value={`${fmt(report.totals.total_co2e)} kg CO₂e`} />
             <Stat label="Emissão média por participante" value={`${fmt(report.totals.avg_co2e)} kg CO₂e`} />
             <Stat label="Árvores estimadas para neutralização" value={`${report.totals.trees_needed.toLocaleString('pt-BR')} árvores`} />
@@ -69,7 +73,11 @@ export default function ReportPage() {
           </section>
 
           <section>
-            <h3 className="font-bold mb-3">Distribuição por modal de transporte</h3>
+            <h3 className="font-bold mb-1">Distribuição por modal de transporte</h3>
+            <p className="text-xs text-(--muted) mb-3">
+              Participantes que usaram mais de um transporte são contados em cada modal,
+              então a soma da coluna pode superar o total de participantes.
+            </p>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-(--ink-2) border-b border-(--grid)">
@@ -116,11 +124,12 @@ export default function ReportPage() {
   );
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, hint }) {
   return (
     <div>
       <p className="text-sm text-(--ink-2)">{label}</p>
       <p className="text-xl font-bold">{value}</p>
+      {hint && <p className="text-xs text-(--muted)">{hint}</p>}
     </div>
   );
 }

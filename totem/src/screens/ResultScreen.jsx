@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
-import { formatKg } from '../emissions/calc.js';
+import { formatKg, MODES } from '../emissions/calc.js';
+
+const MODE_LABEL = Object.fromEntries(MODES.map((m) => [m.id, m.label]));
 
 // Tela final: mostra APENAS a emissão individual do participante.
 // Nenhum dado consolidado do evento aparece aqui.
-export default function ResultScreen({ emission, onFinish }) {
+export default function ResultScreen({ result, onFinish }) {
+  const { total, transports } = result;
+
   // volta sozinho ao início após 60 s, caso o participante vá embora sem tocar em "Finalizar"
   useEffect(() => {
     const timer = setTimeout(onFinish, 60_000);
@@ -15,10 +19,25 @@ export default function ResultScreen({ emission, onFinish }) {
       <div className="badge-leaf">✅</div>
       <h2>Obrigado por participar!</h2>
 
-      <p className="result-lead">Sua emissão estimada neste deslocamento foi de</p>
+      <p className="result-lead">
+        {transports.length > 1
+          ? `Somando os ${transports.length} trechos, sua emissão estimada foi de`
+          : 'Sua emissão estimada neste deslocamento foi de'}
+      </p>
       <div className="result-value">
-        {formatKg(emission)} <span className="result-unit">kg CO₂e</span>
+        {formatKg(total)} <span className="result-unit">kg CO₂e</span>
       </div>
+
+      {transports.length > 1 && (
+        <ul className="leg-breakdown">
+          {transports.map((t, i) => (
+            <li key={i}>
+              <span>{MODE_LABEL[t.transport_mode] || t.transport_mode}</span>
+              <span className="leg-kg">{formatKg(t.emission_kg_co2e)} kg</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <p className="edu-note">
         Pequenas escolhas — como carona compartilhada, transporte coletivo ou bicicleta —

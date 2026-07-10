@@ -61,14 +61,20 @@ export default function App() {
     saveDraft({ step: 'transport', participant: data });
   }
 
-  async function handleTransport(transport) {
-    const emission = computeEmission({
-      mode: transport.transport_mode,
-      fuelType: transport.fuel_type,
-      distanceKm: transport.distance_km,
-      roundTrip: transport.round_trip,
-      passengers: transport.passengers_in_vehicle,
-    });
+  // recebe os trechos do deslocamento (1 a 6); a emissão da resposta é a soma deles
+  async function handleTransport(legs) {
+    const transports = legs.map((leg) => ({
+      ...leg,
+      emission_kg_co2e: computeEmission({
+        mode: leg.transport_mode,
+        fuelType: leg.fuel_type,
+        distanceKm: leg.distance_km,
+        roundTrip: leg.round_trip,
+        passengers: leg.passengers_in_vehicle,
+      }) ?? 0,
+      calculation_version: CALCULATION_VERSION,
+    }));
+    const total = Math.round(transports.reduce((sum, t) => sum + t.emission_kg_co2e, 0) * 10000) / 10000;
 
     const cfg = JSON.parse(localStorage.getItem('carbono-zero-totem-config'));
     await enqueueAnswer({
@@ -77,14 +83,10 @@ export default function App() {
       answered_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       participant,
-      transport: {
-        ...transport,
-        emission_kg_co2e: emission,
-        calculation_version: CALCULATION_VERSION,
-      },
+      transports,
     });
 
-    setResult(emission);
+    setResult({ total, transports });
     setStep('result');
     localStorage.removeItem(DRAFT_KEY); // dados já estão seguros na fila IndexedDB
     pendingCount().then(setPending);
@@ -119,7 +121,7 @@ export default function App() {
       {step === 'transport' && (
         <TransportForm onSubmit={handleTransport} onBack={() => setStep('participant')} />
       )}
-      {step === 'result' && <ResultScreen emission={result} onFinish={handleFinish} />}
+      {step === 'result' && <ResultScreen result={result} onFinish={handleFinish} />}
     </div>
   );
 }

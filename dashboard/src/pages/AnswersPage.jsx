@@ -22,12 +22,14 @@ export default function AnswersPage() {
       {error && <p className="text-red-600">{error}</p>}
 
       <Card>
-        <p className="mb-3 text-sm text-(--ink-2)">{answers.length.toLocaleString('pt-BR')} respostas</p>
+        <p className="mb-3 text-sm text-(--ink-2)">
+          {answers.length.toLocaleString('pt-BR')} trechos de transporte
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-(--ink-2) border-b border-(--grid)">
-                <th className="py-2">Participante</th><th>Modal</th><th>Combustível</th>
+                <th className="py-2">Participante</th><th>Trecho</th><th>Modal</th><th>Combustível</th>
                 <th className="text-right">Distância (km)</th><th>Trajeto</th>
                 <th className="text-right">Pessoas</th><th className="text-right">kg CO₂e</th>
                 <th>Versão do cálculo</th><th>Sincronizada em</th>
@@ -37,6 +39,7 @@ export default function AnswersPage() {
               {answers.map((a) => (
                 <tr key={a.id} className="border-b border-(--grid) last:border-0">
                   <td className="py-2 font-medium">{a.participant_name}</td>
+                  <td className="whitespace-nowrap text-(--ink-2)">{a.leg_index + 1} de {a.legs_count}</td>
                   <td>{MODE_LABELS[a.transport_mode] || a.transport_mode}</td>
                   <td>{FUEL_LABELS[a.fuel_type] || '—'}</td>
                   <td className="text-right tabular-nums">{fmt(a.distance_km, 1)}</td>
