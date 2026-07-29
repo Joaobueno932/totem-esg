@@ -29,7 +29,7 @@ function Shell({ children }) {
 
   return (
     <div className="min-h-screen">
-      <header className="no-print bg-emerald-900 text-white">
+      <header className="no-print cz-header text-white shadow-lg">
         <div className="mx-auto max-w-7xl flex items-center gap-6 px-4 py-3">
           <span className="font-bold text-lg">🌱 Carbono Zero</span>
           <nav className="flex gap-1 flex-1">
@@ -38,7 +38,7 @@ function Shell({ children }) {
             <NavLink to="/leads" className={link}>Leads</NavLink>
             <NavLink to="/respostas" className={link}>Respostas</NavLink>
             <NavLink to="/relatorio" className={link}>Relatório</NavLink>
-            <NavLink to="/sincronizacao" className={link}>Sincronização</NavLink>
+            {admin?.role === 'admin' && <NavLink to="/sincronizacao" className={link}>Sincronização</NavLink>}
             {admin?.role === 'admin' && <NavLink to="/usuarios" className={link}>Usuários</NavLink>}
           </nav>
           <span className="text-sm text-emerald-200">
@@ -68,7 +68,7 @@ export default function App() {
         <Route path="/leads" element={<RequireAuth><Shell><LeadsPage /></Shell></RequireAuth>} />
         <Route path="/respostas" element={<RequireAuth><Shell><AnswersPage /></Shell></RequireAuth>} />
         <Route path="/relatorio" element={<RequireAuth><Shell><ReportPage /></Shell></RequireAuth>} />
-        <Route path="/sincronizacao" element={<RequireAuth><Shell><SyncLogsPage /></Shell></RequireAuth>} />
+        <Route path="/sincronizacao" element={<RequireAdmin><Shell><SyncLogsPage /></Shell></RequireAdmin>} />
         <Route path="/usuarios" element={<RequireAdmin><Shell><UsersPage /></Shell></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

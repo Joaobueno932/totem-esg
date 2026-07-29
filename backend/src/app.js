@@ -16,25 +16,28 @@ export function createApp() {
   app.set('trust proxy', true);
   // 3mb acomoda a imagem base64 do evento (limitada a ~1,5 MB) enviada pelo dashboard.
   app.use(express.json({ limit: '3mb' }));
-  app.use(cors({
-    origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
-  }));
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+  // Duas políticas de CORS:
+  // - adminCors: restrito à(s) origem(ns) do dashboard (CORS_ORIGINS).
+  // - publicCors: liberado, para as rotas do totem — os participantes acessam de
+  //   qualquer domínio/dispositivo (o link do evento) e essas rotas já são públicas
+  //   e rate-limited. Sem isto, o totem hospedado em outra URL fica sem conexão.
+  const adminCors = cors({ origin: config.corsOrigins.includes('*') ? true : config.corsOrigins });
+  const publicCors = cors();
 
-  // rota pública usada pelo totem — protegida por rate limit
+  app.get('/api/health', publicCors, (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+
+  // rotas do totem — protegidas por rate limit e CORS liberado
   const syncLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
     limit: config.syncRateLimit,
     message: { error: 'Limite de requisições atingido. Tente novamente em instantes.' },
   });
-  app.use('/api/sync', syncLimiter, syncRouter);
+  app.use('/api/sync', publicCors, syncLimiter, syncRouter);
+  app.use('/api/public', publicCors, syncLimiter, publicRouter);
 
-  // rotas públicas do totem (resolver evento pelo slug) — mesmo limite de sync
-  app.use('/api/public', syncLimiter, publicRouter);
-
-  app.use('/api/admin', authRouter);   // /api/admin/login (público, com limite próprio)
-  app.use('/api/admin', adminRouter);  // demais rotas exigem JWT
+  app.use('/api/admin', adminCors, authRouter);   // /api/admin/login (público, com limite próprio)
+  app.use('/api/admin', adminCors, adminRouter);  // demais rotas exigem JWT
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {

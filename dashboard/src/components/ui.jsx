@@ -18,7 +18,7 @@ export function modeList(modes) {
 
 export function Card({ children, className = '' }) {
   return (
-    <div className={`rounded-xl bg-(--surface) border border-black/10 p-5 ${className}`}>
+    <div className={`cz-card rounded-2xl bg-(--surface) border border-black/5 p-5 ${className}`}>
       {children}
     </div>
   );
@@ -26,7 +26,7 @@ export function Card({ children, className = '' }) {
 
 export function KpiCard({ label, value, unit, hint }) {
   return (
-    <Card>
+    <Card className="cz-kpi border-l-4 border-l-emerald-600">
       <p className="text-sm text-(--ink-2)">{label}</p>
       <p className="mt-1 text-3xl font-bold text-(--ink)">
         {value}{unit && <span className="text-base font-semibold text-(--ink-2)"> {unit}</span>}
