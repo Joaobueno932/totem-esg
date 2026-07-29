@@ -21,39 +21,57 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+const NAV = [
+  { to: '/', end: true, icon: '📊', label: 'Dashboard' },
+  { to: '/eventos', icon: '🎫', label: 'Eventos' },
+  { to: '/leads', icon: '👥', label: 'Leads' },
+  { to: '/respostas', icon: '📝', label: 'Respostas' },
+  { to: '/relatorio', icon: '📄', label: 'Relatório' },
+  { to: '/sincronizacao', icon: '🔄', label: 'Sincronização', adminOnly: true },
+  { to: '/usuarios', icon: '🔑', label: 'Usuários', adminOnly: true },
+];
+
 function Shell({ children }) {
   const navigate = useNavigate();
   const admin = getAdmin();
-  const link = ({ isActive }) =>
-    `px-3 py-2 rounded-lg text-sm font-medium ${isActive ? 'bg-emerald-800 text-white' : 'text-emerald-100 hover:bg-emerald-800/60'}`;
+  const items = NAV.filter((n) => !n.adminOnly || admin?.role === 'admin');
 
   return (
-    <div className="min-h-screen">
-      <header className="no-print cz-header text-white shadow-lg">
-        <div className="mx-auto max-w-7xl flex items-center gap-6 px-4 py-3">
-          <span className="font-bold text-lg">🌱 Carbono Zero</span>
-          <nav className="flex gap-1 flex-1">
-            <NavLink to="/" end className={link}>Dashboard</NavLink>
-            <NavLink to="/eventos" className={link}>Eventos</NavLink>
-            <NavLink to="/leads" className={link}>Leads</NavLink>
-            <NavLink to="/respostas" className={link}>Respostas</NavLink>
-            <NavLink to="/relatorio" className={link}>Relatório</NavLink>
-            {admin?.role === 'admin' && <NavLink to="/sincronizacao" className={link}>Sincronização</NavLink>}
-            {admin?.role === 'admin' && <NavLink to="/usuarios" className={link}>Usuários</NavLink>}
-          </nav>
-          <span className="text-sm text-emerald-200">
-            {admin?.name}
-            {admin?.role === 'viewer' && <span className="ml-1 text-emerald-300/80">(visualizador)</span>}
+    <div className="min-h-screen flex">
+      <aside className="cz-sidebar no-print sticky top-0 h-screen w-16 md:w-64 flex flex-col shrink-0 text-white">
+        <div className="px-3 md:px-5 h-16 flex items-center justify-center md:justify-start gap-2.5 border-b border-white/10">
+          <img src="/favicon.svg" alt="" className="w-9 h-9 shrink-0" />
+          <span className="hidden md:inline text-xl font-extrabold tracking-tight">
+            <span style={{ color: '#7fe3a0' }}>Eco</span><span style={{ color: '#9cc6ff' }}>Trajeto</span>
           </span>
+        </div>
+        <nav className="cz-nav flex-1 p-2 md:p-3 overflow-y-auto">
+          {items.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end}
+              className={({ isActive }) => `cz-nav-item ${isActive ? 'active' : ''} justify-center md:justify-start`}
+              title={n.label}>
+              <span className="cz-nav-ico">{n.icon}</span>
+              <span className="hidden md:inline">{n.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <div className="p-2 md:p-3 border-t border-white/10">
+          <div className="hidden md:block px-2 pb-2">
+            <p className="text-sm font-semibold text-white truncate">{admin?.name}</p>
+            <span className={`cz-badge ${admin?.role === 'admin' ? 'cz-badge-admin' : 'cz-badge-viewer'} mt-1`}>
+              {admin?.role === 'admin' ? 'Administrador' : 'Visualizador'}
+            </span>
+          </div>
           <button
-            className="text-sm text-emerald-200 hover:text-white"
+            className="cz-nav-item w-full justify-center md:justify-start"
             onClick={() => { clearSession(); navigate('/login'); }}
-          >
-            Sair
+            title="Sair">
+            <span className="cz-nav-ico">🚪</span>
+            <span className="hidden md:inline">Sair</span>
           </button>
         </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+      </aside>
+      <main className="flex-1 min-w-0 px-4 md:px-8 py-6 md:py-8 max-w-7xl w-full mx-auto">{children}</main>
     </div>
   );
 }

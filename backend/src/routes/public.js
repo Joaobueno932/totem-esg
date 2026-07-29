@@ -9,7 +9,8 @@ export const publicRouter = Router();
 // Devolve o necessário para a tela inicial: id (usado no sync), nome e imagem.
 publicRouter.get('/events/:slug', asyncHandler(async (req, res) => {
   const { rows } = await query(
-    `SELECT id, name, slug, location, start_date, end_date, image_data AS image
+    `SELECT id, name, slug, location, start_date, end_date,
+            description, organizer_name, city, state, image_data AS image
        FROM events WHERE slug = $1`,
     [String(req.params.slug).toLowerCase()]
   );

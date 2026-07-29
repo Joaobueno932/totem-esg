@@ -47,7 +47,10 @@ export default function ParticipantForm({ initial, onNext, onBack }) {
 
   return (
     <form className="screen form" onSubmit={submit}>
-      <h2>Seus dados</h2>
+      <div className="form-head">
+        <span className="step-tag">Passo 1 de 2</span>
+        <h2>Seus dados</h2>
+      </div>
 
       <label>
         Nome*

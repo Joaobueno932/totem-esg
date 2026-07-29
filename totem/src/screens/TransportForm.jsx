@@ -82,7 +82,10 @@ export default function TransportForm({ onSubmit, onBack }) {
 
   return (
     <form className="screen form" onSubmit={submit}>
-      <h2>Como você chegou ao evento?</h2>
+      <div className="form-head">
+        <span className="step-tag">Passo 2 de 2</span>
+        <h2>Como você chegou ao evento?</h2>
+      </div>
       <p className="hint">
         Usou mais de um transporte? Adicione um trecho de cada vez — somamos tudo no final.
       </p>

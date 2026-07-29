@@ -18,7 +18,7 @@ export function modeList(modes) {
 
 export function Card({ children, className = '' }) {
   return (
-    <div className={`cz-card rounded-2xl bg-(--surface) border border-black/5 p-5 ${className}`}>
+    <div className={`cz-card p-5 ${className}`}>
       {children}
     </div>
   );

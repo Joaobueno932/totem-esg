@@ -50,7 +50,7 @@ export default function ReportPage() {
       {report && (
         <div className="print-page mx-auto max-w-3xl rounded-xl bg-white border border-black/10 p-10 space-y-8">
           <header className="border-b border-(--grid) pb-6">
-            <p className="text-sm text-emerald-800 font-semibold">🌱 Relatório Carbono Zero — transporte de participantes</p>
+            <p className="text-sm text-emerald-800 font-semibold">🌱 Relatório EcoTrajeto — transporte de participantes</p>
             <h2 className="text-3xl font-bold mt-1">{report.event.name}</h2>
             <p className="text-(--ink-2) mt-1">
               {report.event.location || 'Local não informado'}

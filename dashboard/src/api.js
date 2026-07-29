@@ -1,9 +1,16 @@
 // Cliente da API administrativa. O token JWT fica em sessionStorage
 // (expira ao fechar o navegador) e nunca é exposto em URLs.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 // Base do totem, usada para montar o link/QR de cada evento (base + '/' + slug).
 export const TOTEM_URL = (import.meta.env.VITE_TOTEM_URL || 'https://totem-esg-totem.netlify.app').replace(/\/$/, '');
+
+// Link do totem para um evento. Embute a URL da API (?api=) para o totem publicado
+// não depender de configuração própria — assim o link funciona já no primeiro acesso.
+export function totemEventUrl(slug) {
+  const base = `${TOTEM_URL}/${slug}`;
+  return /localhost/.test(API_URL) ? base : `${base}?api=${encodeURIComponent(API_URL)}`;
+}
 
 export function getToken() {
   return sessionStorage.getItem('cz-token');

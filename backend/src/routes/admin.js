@@ -22,18 +22,37 @@ const imageSchema = z.string().refine((v) => {
   return Math.floor(m[2].length * 0.75) <= MAX_IMAGE_BYTES; // bytes decodificados
 }, 'Imagem inválida (use PNG/JPG/WebP até 1,5 MB)');
 
+const optText = (max) => z.string().trim().max(max).optional().nullable();
 const eventSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  location: z.string().trim().max(300).optional().nullable(),
+  location: optText(300),
   start_date: z.string().date().optional().nullable(),
   end_date: z.string().date().optional().nullable(),
+  description: optText(2000),
+  organizer_name: optText(200),
+  contact_email: optText(200),
+  contact_phone: optText(40),
+  city: optText(120),
+  state: optText(2),
+  expected_attendees: z.number().int().min(0).max(100000000).optional().nullable(),
   // string = definir imagem; null = remover; ausente = manter (no PUT)
   image_data: imageSchema.nullable().optional(),
 });
 
+// valores comuns de INSERT/UPDATE (sem slug e sem imagem, tratados à parte)
+function eventValues(d) {
+  return [
+    d.name, d.location || null, d.start_date || null, d.end_date || null,
+    d.description || null, d.organizer_name || null, d.contact_email || null,
+    d.contact_phone || null, d.city || null, d.state ? d.state.toUpperCase() : null,
+    d.expected_attendees ?? null,
+  ];
+}
+
 // Nunca devolve image_data nas listas (payload pesado); expõe apenas has_image.
 // Colunas sem prefixo de alias para funcionar tanto em RETURNING quanto em SELECT.
 const EVENT_COLUMNS = `id, name, location, start_date, end_date, slug,
+  description, organizer_name, contact_email, contact_phone, city, state, expected_attendees,
   image_updated_at, (image_data IS NOT NULL) AS has_image, created_at, updated_at`;
 
 adminRouter.get('/events', asyncHandler(async (_req, res) => {
@@ -50,16 +69,19 @@ adminRouter.get('/events', asyncHandler(async (_req, res) => {
 adminRouter.post('/events', requireAdmin, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
-  const { name, location, start_date, end_date, image_data } = parsed.data;
-  const slug = await uniqueSlug(name, async (s) => {
+  const d = parsed.data;
+  const slug = await uniqueSlug(d.name, async (s) => {
     const { rowCount } = await query('SELECT 1 FROM events WHERE slug = $1', [s]);
     return rowCount > 0;
   });
   const { rows } = await query(
-    `INSERT INTO events (name, location, start_date, end_date, slug, image_data, image_updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6::text, CASE WHEN $6::text IS NULL THEN NULL ELSE now() END)
+    `INSERT INTO events
+       (name, location, start_date, end_date, description, organizer_name, contact_email,
+        contact_phone, city, state, expected_attendees, slug, image_data, image_updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::text,
+             CASE WHEN $13::text IS NULL THEN NULL ELSE now() END)
      RETURNING ${EVENT_COLUMNS}`,
-    [name, location || null, start_date || null, end_date || null, slug, image_data || null]
+    [...eventValues(d), slug, d.image_data || null]
   );
   res.status(201).json(rows[0]);
 }));
@@ -67,20 +89,29 @@ adminRouter.post('/events', requireAdmin, asyncHandler(async (req, res) => {
 adminRouter.put('/events/:id', requireAdmin, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
-  const { name, location, start_date, end_date, image_data } = parsed.data;
+  const d = parsed.data;
   // O slug fica FIXO após a criação — mudá-lo invalidaria QR codes já impressos.
   // image_data: undefined = mantém; null = remove; string = substitui.
-  const touchImage = image_data !== undefined;
+  const touchImage = d.image_data !== undefined;
   const { rows } = await query(
-    `UPDATE events SET name=$1, location=$2, start_date=$3, end_date=$4,
-       image_data = CASE WHEN $5::boolean THEN $6::text ELSE image_data END,
-       image_updated_at = CASE WHEN $5::boolean THEN (CASE WHEN $6::text IS NULL THEN NULL ELSE now() END) ELSE image_updated_at END,
+    `UPDATE events SET
+       name=$1, location=$2, start_date=$3, end_date=$4, description=$5, organizer_name=$6,
+       contact_email=$7, contact_phone=$8, city=$9, state=$10, expected_attendees=$11,
+       image_data = CASE WHEN $12::boolean THEN $13::text ELSE image_data END,
+       image_updated_at = CASE WHEN $12::boolean THEN (CASE WHEN $13::text IS NULL THEN NULL ELSE now() END) ELSE image_updated_at END,
        updated_at = now()
-     WHERE id=$7 RETURNING ${EVENT_COLUMNS}`,
-    [name, location || null, start_date || null, end_date || null, touchImage, image_data ?? null, req.params.id]
+     WHERE id=$14 RETURNING ${EVENT_COLUMNS}`,
+    [...eventValues(d), touchImage, d.image_data ?? null, req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Evento não encontrado' });
   res.json(rows[0]);
+}));
+
+// Exclui o evento e, por cascata (FK ON DELETE CASCADE), seus participantes e respostas.
+adminRouter.delete('/events/:id', requireAdmin, asyncHandler(async (req, res) => {
+  const { rowCount } = await query('DELETE FROM events WHERE id = $1', [Number(req.params.id)]);
+  if (rowCount === 0) return res.status(404).json({ error: 'Evento não encontrado' });
+  res.json({ ok: true });
 }));
 
 // ---------- Filtros compartilhados ----------

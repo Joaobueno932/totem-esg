@@ -7,15 +7,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'logo.png', 'mark.png'],
       manifest: {
-        name: 'Calculadora CO2e do Evento',
-        short_name: 'Carbono Zero',
+        name: 'EcoTrajeto — pegada de carbono do evento',
+        short_name: 'EcoTrajeto',
         description: 'Calcule a emissão estimada de CO2e do seu deslocamento até o evento',
         display: 'fullscreen',
         orientation: 'portrait',
-        theme_color: '#0d5c3f',
-        background_color: '#f4f9f6',
+        theme_color: '#0b4d34',
+        background_color: '#eaf4ee',
         icons: [
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],

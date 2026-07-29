@@ -5,3 +5,6 @@ dev-dist/
 *.local
 .DS_Store
 .claude/
+
+# imagem-fonte da logo (processada em public/logo.png)
+ChatGPT Image*.png

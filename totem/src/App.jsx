@@ -3,7 +3,7 @@ import StartScreen from './screens/StartScreen.jsx';
 import ParticipantForm from './screens/ParticipantForm.jsx';
 import TransportForm from './screens/TransportForm.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
-import { getEventSlug, loadEvent } from './config.js';
+import { getEventSlug, loadEvent, cleanUrl } from './config.js';
 import { newLocalUuid, enqueueAnswer, pendingCount } from './db.js';
 import { onSyncChange, trySync } from './sync.js';
 import { computeEmission, CALCULATION_VERSION } from './emissions/calc.js';
@@ -34,6 +34,7 @@ export default function App() {
     const slug = getEventSlug();
     if (!slug) { setEventState({ status: 'no-slug' }); return; }
     loadEvent(slug).then((r) => {
+      cleanUrl(); // tira o ?api=... da barra de endereço depois de resolvido
       if (r.event) setEventState({ status: 'ready', event: r.event, offline: r.offline });
       else setEventState({ status: r.error }); // 'not_found' | 'offline'
     });
@@ -154,6 +155,10 @@ function EventGate({ status }) {
   return (
     <div className="app">
       <div className="screen center">
+        <div className="brand">
+          <img src="/icon.svg" alt="" />
+          <span className="wm"><span className="eco">Eco</span><span className="traj">Trajeto</span></span>
+        </div>
         <div className="badge-leaf">{m.icon}</div>
         <h2>{m.title}</h2>
         {m.text && <p className="intro">{m.text}</p>}
