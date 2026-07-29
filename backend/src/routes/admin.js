@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { query } from '../db.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdmin, requireEventManager } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/async-handler.js';
 import { uniqueSlug } from '../util/slug.js';
 
@@ -66,7 +66,7 @@ adminRouter.get('/events', asyncHandler(async (_req, res) => {
   res.json(rows);
 }));
 
-adminRouter.post('/events', requireAdmin, asyncHandler(async (req, res) => {
+adminRouter.post('/events', requireEventManager, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
   const d = parsed.data;
@@ -86,7 +86,7 @@ adminRouter.post('/events', requireAdmin, asyncHandler(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-adminRouter.put('/events/:id', requireAdmin, asyncHandler(async (req, res) => {
+adminRouter.put('/events/:id', requireEventManager, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
   const d = parsed.data;
@@ -108,7 +108,7 @@ adminRouter.put('/events/:id', requireAdmin, asyncHandler(async (req, res) => {
 }));
 
 // Exclui o evento e, por cascata (FK ON DELETE CASCADE), seus participantes e respostas.
-adminRouter.delete('/events/:id', requireAdmin, asyncHandler(async (req, res) => {
+adminRouter.delete('/events/:id', requireEventManager, asyncHandler(async (req, res) => {
   const { rowCount } = await query('DELETE FROM events WHERE id = $1', [Number(req.params.id)]);
   if (rowCount === 0) return res.status(404).json({ error: 'Evento não encontrado' });
   res.json({ ok: true });
@@ -333,7 +333,7 @@ const newUserSchema = z.object({
   name: z.string().trim().min(1).max(200),
   email: z.string().trim().email().max(200),
   password: z.string().min(8).max(200),
-  role: z.enum(['admin', 'viewer']).default('viewer'),
+  role: z.enum(['admin', 'organizador', 'viewer']).default('viewer'),
 });
 
 adminRouter.post('/users', requireAdmin, asyncHandler(async (req, res) => {
@@ -356,7 +356,7 @@ adminRouter.post('/users', requireAdmin, asyncHandler(async (req, res) => {
 
 const updateUserSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
-  role: z.enum(['admin', 'viewer']).optional(),
+  role: z.enum(['admin', 'organizador', 'viewer']).optional(),
   password: z.string().min(8).max(200).optional(),
 });
 
@@ -366,8 +366,8 @@ adminRouter.put('/users/:id', requireAdmin, asyncHandler(async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos' });
   const { name, role, password } = parsed.data;
 
-  // Não deixar o sistema ficar sem nenhum admin (rebaixar o último admin).
-  if (role === 'viewer') {
+  // Não deixar o sistema ficar sem nenhum admin (rebaixar o último admin p/ outro papel).
+  if (role && role !== 'admin') {
     const target = await query('SELECT role FROM admin_users WHERE id = $1', [id]);
     if (target.rows[0]?.role === 'admin') {
       const admins = await query("SELECT count(*)::int AS n FROM admin_users WHERE role = 'admin'");

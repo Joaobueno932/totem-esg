@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { api, getAdmin } from '../api.js';
+import { api, getAdmin, ROLE_LABELS } from '../api.js';
 import { Card } from '../components/ui.jsx';
 
 const EMPTY = { name: '', email: '', password: '', role: 'viewer' };
-const ROLE_LABEL = { admin: 'Administrador', viewer: 'Visualizador' };
+const ROLES = ['admin', 'organizador', 'viewer'];
 
 export default function UsersPage() {
   const me = getAdmin();
@@ -60,6 +60,7 @@ export default function UsersPage() {
             value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <select className={input} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="viewer">Visualizador (só consulta)</option>
+            <option value="organizador">Organizador (gerencia eventos)</option>
             <option value="admin">Administrador (acesso total)</option>
           </select>
           <button className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
@@ -69,8 +70,9 @@ export default function UsersPage() {
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         {notice && <p className="mt-2 text-sm text-emerald-700">{notice}</p>}
         <p className="mt-3 text-xs text-(--muted)">
-          <strong>Administrador</strong> cria eventos, usuários e exporta dados.
-          <strong> Visualizador</strong> apenas consulta dashboard, leads e respostas.
+          <strong>Administrador</strong>: tudo, inclusive usuários. &nbsp;
+          <strong>Organizador</strong>: cria/edita/exclui eventos e vê tudo (menos usuários). &nbsp;
+          <strong>Visualizador</strong>: só consulta dashboard, leads e respostas.
         </p>
       </Card>
 
@@ -95,8 +97,7 @@ export default function UsersPage() {
                     disabled={u.id === me?.id}
                     onChange={(e) => changeRole(u, e.target.value)}
                   >
-                    <option value="viewer">{ROLE_LABEL.viewer}</option>
-                    <option value="admin">{ROLE_LABEL.admin}</option>
+                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                   </select>
                 </td>
                 <td className="whitespace-nowrap">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>

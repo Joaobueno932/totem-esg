@@ -50,10 +50,9 @@ export default function LoginPage() {
       {/* formulário */}
       <div className="flex items-center justify-center p-6 bg-(--surface)">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
-          <div className="lg:hidden flex items-center gap-2 justify-center mb-2">
-            <img src="/favicon.svg" alt="" className="w-9 h-9" />
-            <span className="text-2xl font-extrabold tracking-tight">
-              <span style={{ color: '#2f9e3f' }}>Eco</span><span style={{ color: '#1560d0' }}>Trajeto</span>
+          <div className="lg:hidden flex justify-center mb-2">
+            <span className="inline-flex rounded-2xl px-5 py-3" style={{ background: 'linear-gradient(135deg, #0a3325, #08243a)' }}>
+              <img src="/logo.png" alt="EcoTrajeto" className="h-9" />
             </span>
           </div>
           <div>

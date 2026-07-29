@@ -3,9 +3,8 @@ export default function StartScreen({ event, onStart, pending, online }) {
 
   return (
     <div className="screen center">
-      <div className="brand">
-        <img src="/icon.svg" alt="" />
-        <span className="wm"><span className="eco">Eco</span><span className="traj">Trajeto</span></span>
+      <div className="brand-badge">
+        <img src="/logo.png" alt="EcoTrajeto" />
       </div>
 
       {event.image

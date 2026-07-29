@@ -30,9 +30,21 @@ export function getAdmin() {
   try { return JSON.parse(sessionStorage.getItem('cz-admin')); } catch { return null; }
 }
 
-export function isAdmin() {
-  return getAdmin()?.role === 'admin';
+export function getRole() {
+  return getAdmin()?.role;
 }
+
+export function isAdmin() {
+  return getRole() === 'admin';
+}
+
+// Admin e organizador podem gerenciar eventos (criar/editar/excluir) e ver o operacional.
+export function canManageEvents() {
+  const r = getRole();
+  return r === 'admin' || r === 'organizador';
+}
+
+export const ROLE_LABELS = { admin: 'Administrador', organizador: 'Organizador', viewer: 'Visualizador' };
 
 export async function api(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {

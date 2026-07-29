@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import { getToken, getAdmin, isAdmin, clearSession } from './api.js';
+import { getToken, getAdmin, isAdmin, canManageEvents, ROLE_LABELS, clearSession } from './api.js';
 import LoginPage from './pages/LoginPage.jsx';
 import EventsPage from './pages/EventsPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -21,29 +21,37 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+// Rotas de gestão (admin ou organizador): ex. Sincronização.
+function RequireManage({ children }) {
+  if (!getToken()) return <Navigate to="/login" replace />;
+  if (!canManageEvents()) return <Navigate to="/" replace />;
+  return children;
+}
+
 const NAV = [
   { to: '/', end: true, icon: '📊', label: 'Dashboard' },
   { to: '/eventos', icon: '🎫', label: 'Eventos' },
   { to: '/leads', icon: '👥', label: 'Leads' },
   { to: '/respostas', icon: '📝', label: 'Respostas' },
   { to: '/relatorio', icon: '📄', label: 'Relatório' },
-  { to: '/sincronizacao', icon: '🔄', label: 'Sincronização', adminOnly: true },
-  { to: '/usuarios', icon: '🔑', label: 'Usuários', adminOnly: true },
+  { to: '/sincronizacao', icon: '🔄', label: 'Sincronização', show: 'manage' },
+  { to: '/usuarios', icon: '🔑', label: 'Usuários', show: 'admin' },
 ];
 
 function Shell({ children }) {
   const navigate = useNavigate();
   const admin = getAdmin();
-  const items = NAV.filter((n) => !n.adminOnly || admin?.role === 'admin');
+  const items = NAV.filter((n) =>
+    n.show === 'admin' ? admin?.role === 'admin'
+      : n.show === 'manage' ? canManageEvents()
+        : true);
 
   return (
     <div className="min-h-screen flex">
       <aside className="cz-sidebar no-print sticky top-0 h-screen w-16 md:w-64 flex flex-col shrink-0 text-white">
-        <div className="px-3 md:px-5 h-16 flex items-center justify-center md:justify-start gap-2.5 border-b border-white/10">
-          <img src="/favicon.svg" alt="" className="w-9 h-9 shrink-0" />
-          <span className="hidden md:inline text-xl font-extrabold tracking-tight">
-            <span style={{ color: '#7fe3a0' }}>Eco</span><span style={{ color: '#9cc6ff' }}>Trajeto</span>
-          </span>
+        <div className="px-3 md:px-5 h-16 flex items-center justify-center md:justify-start border-b border-white/10">
+          <img src="/mark.png" alt="EcoTrajeto" className="h-10 md:hidden" />
+          <img src="/logo.png" alt="EcoTrajeto" className="hidden md:block h-10" />
         </div>
         <nav className="cz-nav flex-1 p-2 md:p-3 overflow-y-auto">
           {items.map((n) => (
@@ -58,8 +66,8 @@ function Shell({ children }) {
         <div className="p-2 md:p-3 border-t border-white/10">
           <div className="hidden md:block px-2 pb-2">
             <p className="text-sm font-semibold text-white truncate">{admin?.name}</p>
-            <span className={`cz-badge ${admin?.role === 'admin' ? 'cz-badge-admin' : 'cz-badge-viewer'} mt-1`}>
-              {admin?.role === 'admin' ? 'Administrador' : 'Visualizador'}
+            <span className={`cz-badge cz-badge-${admin?.role || 'viewer'} mt-1`}>
+              {ROLE_LABELS[admin?.role] || 'Visualizador'}
             </span>
           </div>
           <button
@@ -86,7 +94,7 @@ export default function App() {
         <Route path="/leads" element={<RequireAuth><Shell><LeadsPage /></Shell></RequireAuth>} />
         <Route path="/respostas" element={<RequireAuth><Shell><AnswersPage /></Shell></RequireAuth>} />
         <Route path="/relatorio" element={<RequireAuth><Shell><ReportPage /></Shell></RequireAuth>} />
-        <Route path="/sincronizacao" element={<RequireAdmin><Shell><SyncLogsPage /></Shell></RequireAdmin>} />
+        <Route path="/sincronizacao" element={<RequireManage><Shell><SyncLogsPage /></Shell></RequireManage>} />
         <Route path="/usuarios" element={<RequireAdmin><Shell><UsersPage /></Shell></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

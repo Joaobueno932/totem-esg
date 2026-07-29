@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { api, isAdmin, totemEventUrl } from '../api.js';
+import { api, canManageEvents, totemEventUrl } from '../api.js';
 import { fileToScaledDataUrl } from '../img.js';
 import { Card, fmt } from '../components/ui.jsx';
 import EventLink from '../components/EventLink.jsx';
@@ -11,7 +11,7 @@ const EMPTY = {
 };
 
 export default function EventsPage() {
-  const admin = isAdmin();
+  const admin = canManageEvents();
   const [events, setEvents] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);

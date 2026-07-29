@@ -13,13 +13,20 @@ export function requireAuth(req, res, next) {
   }
 }
 
-// Restringe a ação a administradores. 'viewer' só consulta (GETs de leitura).
-export function requireAdmin(req, res, next) {
-  if (req.admin?.role !== 'admin') {
-    return res.status(403).json({ error: 'Ação restrita a administradores' });
-  }
-  next();
+// Restringe a ação a determinados papéis.
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.admin?.role)) {
+      return res.status(403).json({ error: 'Você não tem permissão para esta ação' });
+    }
+    next();
+  };
 }
+
+// Atalho: apenas administradores (ex.: gestão de usuários).
+export const requireAdmin = requireRole('admin');
+// Gerência de eventos: admin ou organizador.
+export const requireEventManager = requireRole('admin', 'organizador');
 
 export function signToken(admin) {
   return jwt.sign(

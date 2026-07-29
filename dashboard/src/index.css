@@ -80,6 +80,7 @@ body {
 
 .cz-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: .72rem; font-weight: 700; }
 .cz-badge-admin { background: #e7f0ff; color: #1e5bbd; }
+.cz-badge-organizador { background: #fdf0dc; color: #a5651a; }
 .cz-badge-viewer { background: var(--brand-50); color: var(--brand-700); }
 
 /* impressão do relatório: esconde navegação e filtros */
