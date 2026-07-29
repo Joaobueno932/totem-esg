@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'logo.png', 'mark.png'],
+      includeAssets: ['icon.svg', 'logo.svg', 'logo-light.svg'],
       manifest: {
         name: 'EcoTrajeto — pegada de carbono do evento',
         short_name: 'EcoTrajeto',

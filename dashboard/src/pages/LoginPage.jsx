@@ -32,7 +32,7 @@ export default function LoginPage() {
       {/* painel de marca */}
       <div className="relative hidden lg:flex flex-col justify-between p-12 text-white overflow-hidden"
         style={{ background: 'linear-gradient(150deg, #159169, #0b4d34 65%, #072e20)' }}>
-        <img src="/logo.png" alt="EcoTrajeto" className="h-16 self-start drop-shadow-lg" />
+        <img src="/logo-light.svg" alt="EcoTrajeto" className="h-14 self-start" />
         <div>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Meça a pegada de carbono<br />dos seus eventos.
@@ -51,9 +51,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6 bg-(--surface)">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div className="lg:hidden flex justify-center mb-2">
-            <span className="inline-flex rounded-2xl px-5 py-3" style={{ background: 'linear-gradient(135deg, #0a3325, #08243a)' }}>
-              <img src="/logo.png" alt="EcoTrajeto" className="h-9" />
-            </span>
+            <img src="/logo.svg" alt="EcoTrajeto" className="h-12" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-(--ink)">Entrar no painel</h2>

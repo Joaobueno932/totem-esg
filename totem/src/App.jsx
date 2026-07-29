@@ -155,9 +155,7 @@ function EventGate({ status }) {
   return (
     <div className="app">
       <div className="screen center">
-        <div className="brand-badge">
-          <img src="/logo.png" alt="EcoTrajeto" />
-        </div>
+        <img className="brand-logo" src="/logo.svg" alt="EcoTrajeto" />
         <div className="badge-leaf">{m.icon}</div>
         <h2>{m.title}</h2>
         {m.text && <p className="intro">{m.text}</p>}

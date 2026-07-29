@@ -50,8 +50,8 @@ function Shell({ children }) {
     <div className="min-h-screen flex">
       <aside className="cz-sidebar no-print sticky top-0 h-screen w-16 md:w-64 flex flex-col shrink-0 text-white">
         <div className="px-3 md:px-5 h-16 flex items-center justify-center md:justify-start border-b border-white/10">
-          <img src="/mark.png" alt="EcoTrajeto" className="h-10 md:hidden" />
-          <img src="/logo.png" alt="EcoTrajeto" className="hidden md:block h-10" />
+          <img src="/favicon.svg" alt="EcoTrajeto" className="h-9 md:hidden" />
+          <img src="/logo-light.svg" alt="EcoTrajeto" className="hidden md:block h-9" />
         </div>
         <nav className="cz-nav flex-1 p-2 md:p-3 overflow-y-auto">
           {items.map((n) => (

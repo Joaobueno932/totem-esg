@@ -37,14 +37,8 @@ body {
 
 .app { min-height: 100%; display: flex; justify-content: center; align-items: flex-start; padding: 22px 16px 90px; }
 
-/* logo da marca sobre um cartão escuro (o PNG tem brilho pensado p/ fundo escuro) */
-.brand-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 14px 28px; border-radius: 18px;
-  background: linear-gradient(135deg, #0a3325, #08243a 92%);
-  box-shadow: var(--shadow-sm);
-}
-.brand-badge img { height: 46px; display: block; }
+/* logo vetorial da marca (nítida em qualquer tamanho) */
+.brand-logo { height: 42px; width: auto; display: block; }
 
 .screen {
   width: 100%;
