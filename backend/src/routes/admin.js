@@ -216,15 +216,21 @@ adminRouter.get('/stats', asyncHandler(async (req, res) => {
 
 // ---------- Relatório consolidado ----------
 
-adminRouter.get('/events/:id/report', asyncHandler(async (req, res) => {
-  const eventId = Number(req.params.id);
-  const ev = await query(`SELECT ${EVENT_COLUMNS} FROM events e WHERE e.id = $1`, [eventId]);
-  if (ev.rowCount === 0) return res.status(404).json({ error: 'Evento não encontrado' });
+// Aceita os mesmos filtros das outras telas (evento, período, cidade, estado, modal,
+// empresa). Sem event_id, o relatório é consolidado: cobre todos os eventos do recorte.
+async function buildReport(q) {
+  const eventId = q.event_id ? Number(q.event_id) : null;
+  let event = null;
+  if (eventId) {
+    const ev = await query(`SELECT ${EVENT_COLUMNS} FROM events e WHERE e.id = $1`, [eventId]);
+    if (ev.rowCount === 0) return null;
+    event = ev.rows[0];
+  }
 
-  const { where, params } = buildFilters({ event_id: eventId });
+  const { where, params } = buildFilters(q);
   const base = `FROM transport_answers a JOIN participants p ON p.id = a.participant_id ${where}`;
 
-  const [totals, byMode, byCity, byCompany, versions] = await Promise.all([
+  const [totals, byMode, byCity, byCompany, versions, byEvent] = await Promise.all([
     query(`SELECT count(DISTINCT p.id)::int AS participants,
                   count(DISTINCT a.local_uuid)::int AS valid_answers,
                   count(*)::int AS legs,
@@ -236,11 +242,23 @@ adminRouter.get('/events/:id/report', asyncHandler(async (req, res) => {
     query(`SELECT COALESCE(NULLIF(trim(p.company),''),'Não informado') AS company, count(DISTINCT p.id)::int AS participants
              ${base} GROUP BY 1 ORDER BY participants DESC`, params),
     query(`SELECT DISTINCT a.calculation_version ${base}`, params),
+    query(`SELECT e.id, e.name, count(DISTINCT p.id)::int AS participants,
+                  COALESCE(sum(a.emission_kg_co2e),0)::float AS co2e
+             FROM transport_answers a
+             JOIN participants p ON p.id = a.participant_id
+             JOIN events e ON e.id = a.event_id
+             ${where} GROUP BY e.id, e.name ORDER BY co2e DESC`, params),
   ]);
 
   const t = totals.rows[0];
-  res.json({
-    event: ev.rows[0],
+  return {
+    event,
+    by_event: byEvent.rows,
+    filters: {
+      event_id: eventId, from: q.from || null, to: q.to || null,
+      city: q.city || null, state: q.state ? String(q.state).toUpperCase() : null,
+      mode: q.mode || null, company: q.company || null,
+    },
     generated_at: new Date().toISOString(),
     totals: {
       participants: t.participants,
@@ -258,7 +276,21 @@ adminRouter.get('/events/:id/report', asyncHandler(async (req, res) => {
       'Os cálculos apresentados são estimativas de emissões de CO2 equivalente relacionadas exclusivamente ao transporte ' +
       'dos participantes até o evento. A metodologia foi inspirada na calculadora pública da Fundação SOS Mata Atlântica ' +
       'e utiliza fatores de emissão versionados, documentados e armazenados no sistema.',
-  });
+  };
+}
+
+// Relatório por filtros (evento opcional, período, cidade, estado, modal, empresa).
+adminRouter.get('/report', asyncHandler(async (req, res) => {
+  const report = await buildReport(req.query);
+  if (!report) return res.status(404).json({ error: 'Evento não encontrado' });
+  res.json(report);
+}));
+
+// Rota legada: relatório de um evento específico.
+adminRouter.get('/events/:id/report', asyncHandler(async (req, res) => {
+  const report = await buildReport({ ...req.query, event_id: req.params.id });
+  if (!report) return res.status(404).json({ error: 'Evento não encontrado' });
+  res.json(report);
 }));
 
 // ---------- Exportação CSV ----------

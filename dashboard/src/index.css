@@ -83,21 +83,17 @@ body {
 .cz-badge-organizador { background: #fdf0dc; color: #a5651a; }
 .cz-badge-viewer { background: var(--brand-50); color: var(--brand-700); }
 
-/* ---------- Relatório ---------- */
-.report-cover {
-  background:
-    radial-gradient(520px 220px at 92% -30%, rgba(155,231,196,.35), transparent 65%),
-    linear-gradient(135deg, #12805a, #0b4d34 65%, #093f2b);
-}
-
 /* impressão do relatório: esconde navegação e filtros */
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }
-  .print-page { box-shadow: none !important; border: none !important; border-radius: 0 !important; max-width: none !important; }
+  .print-page {
+    box-shadow: none !important; border: none !important; border-radius: 0 !important;
+    max-width: none !important; padding: 0 !important; margin: 0 !important;
+  }
   .cz-card { box-shadow: none !important; }
-  /* mantém a capa e as barras coloridas no PDF */
+  /* mantém tarjas e destaques coloridos no PDF */
   .print-page, .print-page * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .print-page section, .print-page li { break-inside: avoid; }
-  @page { margin: 12mm; }
+  .print-page section, .print-page table, .print-page tr { break-inside: avoid; }
+  @page { margin: 14mm; }
 }
