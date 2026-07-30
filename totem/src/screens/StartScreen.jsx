@@ -11,8 +11,9 @@ export default function StartScreen({ event, onStart }) {
 
       <h1 className="event-name">{event.name || 'Evento'}</h1>
 
-      {(place || event.organizer_name) && (
+      {(place || event.venue || event.organizer_name) && (
         <div className="event-meta">
+          {event.venue && <span className="pill">🏟️ {event.venue}</span>}
           {place && <span className="pill">📍 {place}</span>}
           {event.organizer_name && <span className="pill">🏛️ {event.organizer_name}</span>}
         </div>

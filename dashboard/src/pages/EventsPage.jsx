@@ -6,9 +6,24 @@ import EventLink from '../components/EventLink.jsx';
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 const EMPTY = {
-  name: '', location: '', city: '', state: '', start_date: '', end_date: '',
+  name: '', cep: '', location: '', venue: '', city: '', state: '', start_date: '', end_date: '',
   expected_attendees: '', organizer_name: '', contact_email: '', contact_phone: '', description: '',
 };
+
+const onlyDigits = (v) => v.replace(/\D/g, '');
+const maskCep = (v) => {
+  const d = onlyDigits(v).slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+};
+
+// ViaCEP: API pública dos Correios-community, sem chave e com CORS liberado.
+async function lookupCep(cep) {
+  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+  if (!res.ok) throw new Error('Não foi possível consultar o CEP agora.');
+  const data = await res.json();
+  if (data.erro) throw new Error('CEP não encontrado.');
+  return data;
+}
 
 export default function EventsPage() {
   const admin = canManageEvents();
@@ -26,7 +41,36 @@ export default function EventsPage() {
   const load = () => api('/api/admin/events').then(setEvents).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
 
+  const [cepStatus, setCepStatus] = useState(''); // '' | 'buscando' | 'ok' | mensagem de erro
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Busca o endereço assim que o CEP fica completo (8 dígitos); também roda no blur.
+  async function fillFromCep(rawCep) {
+    const cep = onlyDigits(rawCep);
+    if (cep.length !== 8) { setCepStatus(''); return; }
+    setCepStatus('buscando');
+    try {
+      const d = await lookupCep(cep);
+      const street = [d.logradouro, d.bairro].filter(Boolean).join(' — ');
+      setForm((f) => ({
+        ...f,
+        location: street || f.location,
+        city: d.localidade || f.city,
+        state: d.uf || f.state,
+      }));
+      setCepStatus('ok');
+    } catch (err) {
+      setCepStatus(err.message);
+    }
+  }
+
+  function changeCep(e) {
+    const cep = maskCep(e.target.value);
+    setForm((f) => ({ ...f, cep }));
+    if (onlyDigits(cep).length === 8) fillFromCep(cep);
+    else setCepStatus('');
+  }
 
   function resetForm() {
     setForm(EMPTY); setEditingId(null); setShowForm(false);
@@ -54,6 +98,8 @@ export default function EventsPage() {
     try {
       const body = {
         name: form.name,
+        cep: form.cep || null,
+        venue: form.venue || null,
         location: form.location || null,
         city: form.city || null,
         state: form.state || null,
@@ -79,8 +125,10 @@ export default function EventsPage() {
 
   function startEdit(ev) {
     setEditingId(ev.id); setShowForm(true);
+    setCepStatus('');
     setForm({
-      name: ev.name, location: ev.location || '', city: ev.city || '', state: ev.state || '',
+      name: ev.name, cep: ev.cep || '', venue: ev.venue || '',
+      location: ev.location || '', city: ev.city || '', state: ev.state || '',
       start_date: ev.start_date?.slice(0, 10) || '', end_date: ev.end_date?.slice(0, 10) || '',
       expected_attendees: ev.expected_attendees ?? '', organizer_name: ev.organizer_name || '',
       contact_email: ev.contact_email || '', contact_phone: ev.contact_phone || '', description: ev.description || '',
@@ -124,8 +172,24 @@ export default function EventsPage() {
               <input className="cz-input" value={form.organizer_name} onChange={set('organizer_name')} placeholder="Empresa / instituição" />
             </Field>
 
-            <Field className="sm:col-span-3" label="Local (espaço/endereço)">
-              <input className="cz-input" value={form.location} onChange={set('location')} placeholder="Ex.: Centro de Convenções" />
+            <Field className="sm:col-span-2" label="CEP">
+              <input
+                className="cz-input" value={form.cep} onChange={changeCep}
+                onBlur={() => fillFromCep(form.cep)}
+                inputMode="numeric" placeholder="00000-000"
+              />
+              {cepStatus === 'buscando' && <span className="text-xs text-(--muted)">Buscando endereço…</span>}
+              {cepStatus === 'ok' && <span className="text-xs text-emerald-700">Endereço preenchido automaticamente.</span>}
+              {cepStatus && !['ok', 'buscando'].includes(cepStatus) && (
+                <span className="text-xs text-red-600">{cepStatus}</span>
+              )}
+            </Field>
+            <Field className="sm:col-span-4" label="Endereço">
+              <input className="cz-input" value={form.location} onChange={set('location')} placeholder="Rua, avenida — bairro" />
+            </Field>
+
+            <Field className="sm:col-span-3" label="Espaço / local do evento">
+              <input className="cz-input" value={form.venue} onChange={set('venue')} placeholder="Ex.: Pavilhão de Exposições, Sala 2" />
             </Field>
             <Field className="sm:col-span-2" label="Cidade">
               <input className="cz-input" value={form.city} onChange={set('city')} placeholder="Cidade" />
@@ -206,7 +270,10 @@ export default function EventsPage() {
                       </div>
                       {ev.organizer_name && <div className="text-xs text-(--muted)">{ev.organizer_name}</div>}
                     </td>
-                    <td>{[ev.city, ev.state].filter(Boolean).join('/') || ev.location || '—'}</td>
+                    <td>
+                      <div>{[ev.city, ev.state].filter(Boolean).join('/') || ev.location || '—'}</div>
+                      {ev.venue && <div className="text-xs text-(--muted)">{ev.venue}</div>}
+                    </td>
                     <td className="whitespace-nowrap">{ev.start_date ? `${ev.start_date.slice(0, 10)}${ev.end_date ? ' → ' + ev.end_date.slice(0, 10) : ''}` : '—'}</td>
                     <td className="text-right tabular-nums">{ev.answers_count}</td>
                     <td className="text-right tabular-nums">{fmt(ev.total_co2e)}</td>

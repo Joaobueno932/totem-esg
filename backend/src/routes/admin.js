@@ -32,6 +32,8 @@ const eventSchema = z.object({
   organizer_name: optText(200),
   contact_email: optText(200),
   contact_phone: optText(40),
+  cep: optText(9),
+  venue: optText(200),
   city: optText(120),
   state: optText(2),
   expected_attendees: z.number().int().min(0).max(100000000).optional().nullable(),
@@ -45,15 +47,25 @@ function eventValues(d) {
     d.name, d.location || null, d.start_date || null, d.end_date || null,
     d.description || null, d.organizer_name || null, d.contact_email || null,
     d.contact_phone || null, d.city || null, d.state ? d.state.toUpperCase() : null,
-    d.expected_attendees ?? null,
+    d.expected_attendees ?? null, d.cep || null, d.venue || null,
   ];
+}
+
+// A mensagem do zod (ex.: limite da imagem) é mais útil que um "Dados inválidos" genérico.
+function invalid(res, parsed) {
+  const issue = parsed.error.issues[0];
+  const field = issue?.path?.join('.');
+  return res.status(400).json({
+    error: issue?.message ? `${field ? `${field}: ` : ''}${issue.message}` : 'Dados inválidos',
+    details: parsed.error.issues,
+  });
 }
 
 // Nunca devolve image_data nas listas (payload pesado); expõe apenas has_image.
 // Colunas sem prefixo de alias para funcionar tanto em RETURNING quanto em SELECT.
 const EVENT_COLUMNS = `id, name, location, start_date, end_date, slug,
-  description, organizer_name, contact_email, contact_phone, city, state, expected_attendees,
-  image_updated_at, (image_data IS NOT NULL) AS has_image, created_at, updated_at`;
+  description, organizer_name, contact_email, contact_phone, city, state, cep, venue,
+  expected_attendees, image_updated_at, (image_data IS NOT NULL) AS has_image, created_at, updated_at`;
 
 adminRouter.get('/events', asyncHandler(async (_req, res) => {
   // uma resposta = um local_uuid (pode ter vários trechos de transporte)
@@ -68,7 +80,7 @@ adminRouter.get('/events', asyncHandler(async (_req, res) => {
 
 adminRouter.post('/events', requireEventManager, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
+  if (!parsed.success) return invalid(res, parsed);
   const d = parsed.data;
   const slug = await uniqueSlug(d.name, async (s) => {
     const { rowCount } = await query('SELECT 1 FROM events WHERE slug = $1', [s]);
@@ -77,9 +89,9 @@ adminRouter.post('/events', requireEventManager, asyncHandler(async (req, res) =
   const { rows } = await query(
     `INSERT INTO events
        (name, location, start_date, end_date, description, organizer_name, contact_email,
-        contact_phone, city, state, expected_attendees, slug, image_data, image_updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::text,
-             CASE WHEN $13::text IS NULL THEN NULL ELSE now() END)
+        contact_phone, city, state, expected_attendees, cep, venue, slug, image_data, image_updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::text,
+             CASE WHEN $15::text IS NULL THEN NULL ELSE now() END)
      RETURNING ${EVENT_COLUMNS}`,
     [...eventValues(d), slug, d.image_data || null]
   );
@@ -88,7 +100,7 @@ adminRouter.post('/events', requireEventManager, asyncHandler(async (req, res) =
 
 adminRouter.put('/events/:id', requireEventManager, asyncHandler(async (req, res) => {
   const parsed = eventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Dados inválidos', details: parsed.error.issues });
+  if (!parsed.success) return invalid(res, parsed);
   const d = parsed.data;
   // O slug fica FIXO após a criação — mudá-lo invalidaria QR codes já impressos.
   // image_data: undefined = mantém; null = remove; string = substitui.
@@ -97,10 +109,11 @@ adminRouter.put('/events/:id', requireEventManager, asyncHandler(async (req, res
     `UPDATE events SET
        name=$1, location=$2, start_date=$3, end_date=$4, description=$5, organizer_name=$6,
        contact_email=$7, contact_phone=$8, city=$9, state=$10, expected_attendees=$11,
-       image_data = CASE WHEN $12::boolean THEN $13::text ELSE image_data END,
-       image_updated_at = CASE WHEN $12::boolean THEN (CASE WHEN $13::text IS NULL THEN NULL ELSE now() END) ELSE image_updated_at END,
+       cep=$12, venue=$13,
+       image_data = CASE WHEN $14::boolean THEN $15::text ELSE image_data END,
+       image_updated_at = CASE WHEN $14::boolean THEN (CASE WHEN $15::text IS NULL THEN NULL ELSE now() END) ELSE image_updated_at END,
        updated_at = now()
-     WHERE id=$14 RETURNING ${EVENT_COLUMNS}`,
+     WHERE id=$16 RETURNING ${EVENT_COLUMNS}`,
     [...eventValues(d), touchImage, d.image_data ?? null, req.params.id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Evento não encontrado' });
