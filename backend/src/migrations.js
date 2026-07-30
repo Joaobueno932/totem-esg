@@ -4,25 +4,28 @@
 // logo após subir uma coluna nova).
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { pool } from './db.js';
 
-// Em serverless o arquivo é empacotado (esbuild), então o caminho relativo ao módulo
-// nem sempre existe: procuramos a pasta nos lugares plausíveis.
-const here = path.dirname(fileURLToPath(import.meta.url));
-const CANDIDATES = [
-  path.join(here, '..', 'migrations'),
-  path.join(here, 'migrations'),
-  path.join(process.cwd(), 'migrations'),
-  path.join(process.cwd(), 'backend', 'migrations'),
-];
-
+// Nada de import.meta.url aqui: este módulo é empacotado pelo esbuild na Netlify
+// Function e, dependendo do formato de saída, import.meta fica indefinido — o módulo
+// quebrava no load e a API inteira respondia 502 ("Failed to fetch" no navegador).
+// Procuramos a pasta a partir do diretório de trabalho, com MIGRATIONS_DIR como escape.
 function migrationsDir() {
-  return CANDIDATES.find((d) => fs.existsSync(d)) || null;
+  const candidates = [
+    process.env.MIGRATIONS_DIR,
+    path.join(process.cwd(), 'migrations'),
+    path.join(process.cwd(), 'backend', 'migrations'),
+    path.join(process.cwd(), '..', 'migrations'),
+  ].filter(Boolean);
+  try {
+    return candidates.find((d) => fs.existsSync(d)) || null;
+  } catch {
+    return null;
+  }
 }
 
 // Chave arbitrária, só precisa ser estável: serializa dois processos subindo juntos.
-const LOCK_KEY = 8273461982734n;
+const LOCK_KEY = '8273461982734';
 
 export async function runMigrations({ log = () => {} } = {}) {
   const dir = migrationsDir();
@@ -58,14 +61,13 @@ export async function runMigrations({ log = () => {} } = {}) {
 }
 
 // Uma tentativa por processo: as requisições esperam esta promessa antes de tocar o banco.
+// Falha aqui NUNCA derruba a API — o schema pode já estar correto (migrations rodadas
+// pelo `npm run migrate`); registramos no log e seguimos atendendo.
 let pending = null;
 export function ensureMigrations() {
   if (!pending) {
     pending = runMigrations({ log: (m) => console.log(`[migrate] ${m}`) })
-      .catch((err) => {
-        pending = null; // deixa a próxima requisição tentar de novo
-        throw err;
-      });
+      .catch((err) => { console.error(`[migrate] ${err.message}`); });
   }
   return pending;
 }
