@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { api, canManageEvents, totemEventUrl } from '../api.js';
 import { fileToScaledDataUrl } from '../img.js';
-import { Card, fmt } from '../components/ui.jsx';
+import { Card, fmt, Spinner } from '../components/ui.jsx';
 import EventLink from '../components/EventLink.jsx';
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -37,8 +37,14 @@ export default function EventsPage() {
   const [imageAction, setImageAction] = useState('keep'); // keep | set | remove
   const [imagePreview, setImagePreview] = useState('');
   const [editingHasImage, setEditingHasImage] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingList, setLoadingList] = useState(true);
 
-  const load = () => api('/api/admin/events').then(setEvents).catch((e) => setError(e.message));
+  const load = () => api('/api/admin/events')
+    .then(setEvents)
+    .catch((e) => setError(e.message))
+    .finally(() => setLoadingList(false));
   useEffect(() => { load(); }, []);
 
   const [cepStatus, setCepStatus] = useState(''); // '' | 'buscando' | 'ok' | mensagem de erro
@@ -86,15 +92,19 @@ export default function EventsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setError('');
+    setImageBusy(true);
     try {
       setImagePreview(await fileToScaledDataUrl(file));
       setImageAction('set');
     } catch (err) { setError(err.message); }
+    finally { setImageBusy(false); }
   }
 
   async function submit(e) {
     e.preventDefault();
+    if (saving) return;
     setError('');
+    setSaving(true);
     try {
       const body = {
         name: form.name,
@@ -121,6 +131,7 @@ export default function EventsPage() {
       await load();
       setOpenLink(saved.id);
     } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   }
 
   function startEdit(ev) {
@@ -230,8 +241,11 @@ export default function EventsPage() {
                   Imagem do evento (aparece no totem)
                   {showsExistingImage && <span className="ml-1 text-emerald-700">— já definida</span>}
                 </span>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickImage} className="text-sm" />
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickImage} className="text-sm" disabled={imageBusy} />
               </label>
+              {imageBusy && (
+                <span className="text-sm text-(--ink-2) inline-flex items-center gap-2"><Spinner /> Preparando imagem…</span>
+              )}
               {(imageAction === 'set' || showsExistingImage) && (
                 <button type="button" className="text-sm text-red-600 hover:underline" onClick={() => { setImageAction('remove'); setImagePreview(''); }}>
                   Remover imagem
@@ -240,9 +254,17 @@ export default function EventsPage() {
               {imageAction === 'remove' && <span className="text-sm text-(--muted)">Imagem será removida ao salvar.</span>}
             </div>
 
-            <div className="sm:col-span-6 flex gap-2 pt-1">
-              <button className="cz-btn cz-btn-primary">{editingId ? 'Salvar alterações' : 'Criar evento'}</button>
-              <button type="button" className="cz-btn cz-btn-ghost" onClick={resetForm}>Cancelar</button>
+            <div className="sm:col-span-6 flex gap-2 pt-1 items-center">
+              <button className="cz-btn cz-btn-primary" disabled={saving || imageBusy}>
+                {saving && <Spinner />}
+                {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Criar evento'}
+              </button>
+              <button type="button" className="cz-btn cz-btn-ghost" onClick={resetForm} disabled={saving}>Cancelar</button>
+              {saving && (
+                <span className="text-sm text-(--ink-2)">
+                  Enviando dados{imagePreview ? ' e imagem' : ''} — não feche a página.
+                </span>
+              )}
             </div>
           </form>
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -294,7 +316,12 @@ export default function EventsPage() {
                   )}
                 </Fragment>
               ))}
-              {events.length === 0 && (
+              {loadingList && (
+                <tr><td colSpan={6} className="py-8 text-center text-(--muted)">
+                  <span className="inline-flex items-center gap-2"><Spinner /> Carregando eventos…</span>
+                </td></tr>
+              )}
+              {!loadingList && events.length === 0 && (
                 <tr><td colSpan={6} className="py-8 text-center text-(--muted)">Nenhum evento ainda. Clique em “Novo evento”.</td></tr>
               )}
             </tbody>

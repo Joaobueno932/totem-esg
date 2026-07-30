@@ -2,10 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config.js';
 import { createRateLimiter } from './rate-limit.js';
+import { asyncHandler } from './middleware/async-handler.js';
 import { syncRouter } from './routes/sync.js';
 import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { publicRouter } from './routes/public.js';
+import { ensureMigrations } from './migrations.js';
 
 export function createApp() {
   const app = express();
@@ -26,6 +28,13 @@ export function createApp() {
   const publicCors = cors();
 
   app.get('/api/health', publicCors, (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+
+  // Garante que o schema está atualizado antes de qualquer rota tocar o banco.
+  // Roda uma vez por processo; as demais requisições só aguardam a promessa.
+  app.use('/api', asyncHandler(async (_req, _res, next) => {
+    await ensureMigrations();
+    next();
+  }));
 
   // rotas do totem — protegidas por rate limit e CORS liberado
   const syncLimiter = createRateLimiter({

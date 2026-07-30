@@ -6,6 +6,8 @@
 
 [functions]
   node_bundler = "esbuild"
+  # Os .sql precisam ir junto no bundle: a API aplica as migrations pendentes no boot.
+  included_files = ["migrations/**"]
   external_node_modules = [
     "express",
     "pg",

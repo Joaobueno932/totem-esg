@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { api, qs, downloadCsv } from '../api.js';
-import { Card, FilterBar, EMPTY_FILTERS, modeList, fmt } from '../components/ui.jsx';
+import { Card, FilterBar, Loading, EMPTY_FILTERS, modeList, fmt } from '../components/ui.jsx';
 
 export default function LeadsPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [leads, setLeads] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api(`/api/admin/leads${qs(filters)}`).then(setLeads).catch((e) => setError(e.message));
+    setLoading(true);
+    api(`/api/admin/leads${qs(filters)}`)
+      .then(setLeads)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [filters]);
 
   function exportXlsx() {
@@ -48,7 +53,9 @@ export default function LeadsPage() {
       {error && <p className="text-red-600">{error}</p>}
 
       <Card>
-        <p className="mb-3 text-sm text-(--ink-2)">{leads.length.toLocaleString('pt-BR')} leads</p>
+        <div className="mb-3 text-sm text-(--ink-2)">
+          {loading ? <Loading label="Carregando leads…" /> : `${leads.length.toLocaleString('pt-BR')} leads`}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

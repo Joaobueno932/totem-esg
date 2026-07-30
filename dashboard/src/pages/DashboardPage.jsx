@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { api, qs } from '../api.js';
-import { Card, KpiCard, BarList, FilterBar, EMPTY_FILTERS, MODE_LABELS, modeList, fmt } from '../components/ui.jsx';
+import { Card, KpiCard, BarList, FilterBar, Loading, EMPTY_FILTERS, MODE_LABELS, modeList, fmt } from '../components/ui.jsx';
 
 export default function DashboardPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -15,7 +15,7 @@ export default function DashboardPage() {
   }, [filters]);
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!stats) return <p className="text-(--muted)">Carregando…</p>;
+  if (!stats) return <Loading label="Carregando indicadores…" />;
 
   const { totals } = stats;
   const modeData = stats.by_mode.map((m) => ({

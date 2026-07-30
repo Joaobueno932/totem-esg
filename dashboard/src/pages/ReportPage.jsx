@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, qs } from '../api.js';
-import { MODE_LABELS, fmt } from '../components/ui.jsx';
+import { MODE_LABELS, fmt, Loading } from '../components/ui.jsx';
 
 const dateBR = (d) => new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 const EMPTY = { event_id: '', from: '', to: '', city: '', state: '', mode: '', company: '' };
@@ -107,7 +107,7 @@ export default function ReportPage() {
       </div>
 
       {error && <p className="text-red-600">{error}</p>}
-      {loading && !error && <p className="text-(--muted)">Carregando…</p>}
+      {loading && !error && <Loading label="Gerando relatório…" />}
 
       {report && !loading && (
         <div className="print-page mx-auto max-w-3xl rounded-xl bg-white border border-black/10 p-10 space-y-8">

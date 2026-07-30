@@ -16,6 +16,19 @@ export function modeList(modes) {
   return modes.map((m) => MODE_LABELS[m] || m).join(' + ');
 }
 
+// Indicador de trabalho em andamento: sem ele o usuário acha que travou ou perdeu os dados.
+export function Spinner() {
+  return <span className="cz-spinner" aria-hidden />;
+}
+
+export function Loading({ label = 'Carregando…' }) {
+  return (
+    <p className="inline-flex items-center gap-2 text-(--ink-2)" role="status">
+      <Spinner /> {label}
+    </p>
+  );
+}
+
 export function Card({ children, className = '' }) {
   return (
     <div className={`cz-card p-5 ${className}`}>

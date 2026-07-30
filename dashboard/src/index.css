@@ -78,6 +78,16 @@ body {
 }
 .cz-input:focus { outline: none; border-color: var(--brand-600); box-shadow: 0 0 0 3px rgba(21,145,105,.15); }
 
+.cz-spinner {
+  width: 1em; height: 1em; flex: none; display: inline-block;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  opacity: .8; animation: cz-spin .7s linear infinite;
+}
+@keyframes cz-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cz-spinner { animation-duration: 2.4s; } }
+
+.cz-btn:disabled { opacity: .6; cursor: progress; filter: none; }
+
 .cz-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: .72rem; font-weight: 700; }
 .cz-badge-admin { background: #e7f0ff; color: #1e5bbd; }
 .cz-badge-organizador { background: #fdf0dc; color: #a5651a; }

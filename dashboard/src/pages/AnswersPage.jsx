@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, qs } from '../api.js';
-import { Card, FilterBar, EMPTY_FILTERS, MODE_LABELS, fmt } from '../components/ui.jsx';
+import { Card, FilterBar, Loading, EMPTY_FILTERS, MODE_LABELS, fmt } from '../components/ui.jsx';
 
 const FUEL_LABELS = {
   gasolina: 'Gasolina', etanol: 'Etanol', diesel: 'Diesel', gnv: 'GNV', flex: 'Flex', outro: 'Outro',
@@ -10,9 +10,14 @@ export default function AnswersPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [answers, setAnswers] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api(`/api/admin/answers${qs(filters)}`).then(setAnswers).catch((e) => setError(e.message));
+    setLoading(true);
+    api(`/api/admin/answers${qs(filters)}`)
+      .then(setAnswers)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [filters]);
 
   return (
@@ -22,9 +27,9 @@ export default function AnswersPage() {
       {error && <p className="text-red-600">{error}</p>}
 
       <Card>
-        <p className="mb-3 text-sm text-(--ink-2)">
-          {answers.length.toLocaleString('pt-BR')} trechos de transporte
-        </p>
+        <div className="mb-3 text-sm text-(--ink-2)">
+          {loading ? <Loading label="Carregando respostas…" /> : `${answers.length.toLocaleString('pt-BR')} trechos de transporte`}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
