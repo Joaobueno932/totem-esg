@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import { getToken, getAdmin, isAdmin, canManageEvents, ROLE_LABELS, clearSession } from './api.js';
+import { getToken, getAdmin, isAdmin, ROLE_LABELS, clearSession } from './api.js';
 import LoginPage from './pages/LoginPage.jsx';
 import EventsPage from './pages/EventsPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -21,30 +21,21 @@ function RequireAdmin({ children }) {
   return children;
 }
 
-// Rotas de gestão (admin ou organizador): ex. Sincronização.
-function RequireManage({ children }) {
-  if (!getToken()) return <Navigate to="/login" replace />;
-  if (!canManageEvents()) return <Navigate to="/" replace />;
-  return children;
-}
-
 const NAV = [
   { to: '/', end: true, icon: '📊', label: 'Dashboard' },
   { to: '/eventos', icon: '🎫', label: 'Eventos' },
   { to: '/leads', icon: '👥', label: 'Leads' },
   { to: '/respostas', icon: '📝', label: 'Respostas' },
   { to: '/relatorio', icon: '📄', label: 'Relatório' },
-  { to: '/sincronizacao', icon: '🔄', label: 'Sincronização', show: 'manage' },
+  // Sincronização é diagnóstico técnico da fila do totem: só administradores.
+  { to: '/sincronizacao', icon: '🔄', label: 'Sincronização', show: 'admin' },
   { to: '/usuarios', icon: '🔑', label: 'Usuários', show: 'admin' },
 ];
 
 function Shell({ children }) {
   const navigate = useNavigate();
   const admin = getAdmin();
-  const items = NAV.filter((n) =>
-    n.show === 'admin' ? admin?.role === 'admin'
-      : n.show === 'manage' ? canManageEvents()
-        : true);
+  const items = NAV.filter((n) => (n.show === 'admin' ? admin?.role === 'admin' : true));
 
   return (
     <div className="min-h-screen flex">
@@ -94,7 +85,7 @@ export default function App() {
         <Route path="/leads" element={<RequireAuth><Shell><LeadsPage /></Shell></RequireAuth>} />
         <Route path="/respostas" element={<RequireAuth><Shell><AnswersPage /></Shell></RequireAuth>} />
         <Route path="/relatorio" element={<RequireAuth><Shell><ReportPage /></Shell></RequireAuth>} />
-        <Route path="/sincronizacao" element={<RequireManage><Shell><SyncLogsPage /></Shell></RequireManage>} />
+        <Route path="/sincronizacao" element={<RequireAdmin><Shell><SyncLogsPage /></Shell></RequireAdmin>} />
         <Route path="/usuarios" element={<RequireAdmin><Shell><UsersPage /></Shell></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
