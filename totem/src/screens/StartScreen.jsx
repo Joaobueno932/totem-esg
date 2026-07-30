@@ -1,4 +1,4 @@
-export default function StartScreen({ event, onStart, pending, online }) {
+export default function StartScreen({ event, onStart }) {
   const place = [event.city, event.state].filter(Boolean).join('/') || event.location;
 
   return (
@@ -25,12 +25,6 @@ export default function StartScreen({ event, onStart, pending, online }) {
       </p>
 
       <button className="btn-primary btn-xl" onClick={onStart}>Começar →</button>
-
-      <div className="status-bar">
-        <span className={online ? 'dot dot-on' : 'dot dot-off'} />
-        {online ? 'Conectado' : 'Sem internet — suas respostas ficam salvas'}
-        {pending > 0 && <span className="pending-chip">{pending} aguardando envio</span>}
-      </div>
     </div>
   );
 }

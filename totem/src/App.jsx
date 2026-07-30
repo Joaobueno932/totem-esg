@@ -115,21 +115,28 @@ export default function App() {
 
   return (
     <div className="app">
-      {step === 'start' && (
-        <StartScreen
-          event={eventState.event}
-          onStart={handleStart}
-          pending={pending}
-          online={online}
-        />
-      )}
-      {step === 'participant' && (
-        <ParticipantForm initial={participant} onNext={handleParticipant} onBack={handleFinish} />
-      )}
-      {step === 'transport' && (
-        <TransportForm onSubmit={handleTransport} onBack={() => setStep('participant')} />
-      )}
-      {step === 'result' && <ResultScreen result={result} onFinish={handleFinish} />}
+      <main className="app-main">
+        {step === 'start' && <StartScreen event={eventState.event} onStart={handleStart} />}
+        {step === 'participant' && (
+          <ParticipantForm initial={participant} onNext={handleParticipant} onBack={handleFinish} />
+        )}
+        {step === 'transport' && (
+          <TransportForm onSubmit={handleTransport} onBack={() => setStep('participant')} />
+        )}
+        {step === 'result' && <ResultScreen result={result} onFinish={handleFinish} />}
+      </main>
+      {step === 'start' && <StatusBar online={online} pending={pending} />}
+    </div>
+  );
+}
+
+// Rodapé do fluxo: fica no fim da página (nunca por cima do conteúdo).
+function StatusBar({ online, pending }) {
+  return (
+    <div className="status-bar">
+      <span className={online ? 'dot dot-on' : 'dot dot-off'} />
+      {online ? 'Conectado' : 'Sem internet — suas respostas ficam salvas'}
+      {pending > 0 && <span className="pending-chip">{pending} aguardando envio</span>}
     </div>
   );
 }
@@ -154,12 +161,14 @@ function EventGate({ status }) {
   const m = messages[status] || messages.offline;
   return (
     <div className="app">
-      <div className="screen center">
-        <img className="brand-logo" src="/logo.svg" alt="EcoTrajeto" />
-        <div className="badge-leaf">{m.icon}</div>
-        <h2>{m.title}</h2>
-        {m.text && <p className="intro">{m.text}</p>}
-      </div>
+      <main className="app-main">
+        <div className="screen center">
+          <img className="brand-logo" src="/logo.svg" alt="EcoTrajeto" />
+          <div className="badge-leaf">{m.icon}</div>
+          <h2>{m.title}</h2>
+          {m.text && <p className="intro">{m.text}</p>}
+        </div>
+      </main>
     </div>
   );
 }
