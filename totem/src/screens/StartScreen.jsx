@@ -3,7 +3,7 @@ export default function StartScreen({ event, onStart }) {
 
   return (
     <div className="screen center">
-      <img className="brand-logo" src="/logo.svg" alt="PegadaNeutra" />
+      <img className="brand-logo" src="/logo.webp" alt="PegadaNeutra" />
 
       {event.image
         ? <img className="event-image" src={event.image} alt={event.name} />

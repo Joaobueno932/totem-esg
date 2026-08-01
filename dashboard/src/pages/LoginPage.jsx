@@ -2,32 +2,43 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, setSession } from '../api.js';
 
-// Pegada vetorial da marca (mesmo desenho do logo, em miniatura).
-function Footprint(props) {
+// Pegada de capivara: coxim central com os dedos abrindo em leque.
+// A pata dianteira tem 4 dedos e a traseira 3 — a trilha alterna as duas.
+const TOES = {
+  front: [{ a: -66, s: 0.9 }, { a: -30, s: 1.05 }, { a: 6, s: 1.06 }, { a: 42, s: 0.92 }],
+  hind: [{ a: -48, s: 0.96 }, { a: -4, s: 1.08 }, { a: 40, s: 0.98 }],
+};
+const PAD = 'M14 26.6c1.6-4.8 5.8-7.8 10.8-7.6 5 .2 9 3 9.6 7.4.6 5-2.2 9.8-7.2 11.8-4.6 1.8-10.2.2-12.2-4-1.6-3-2-5.2-1-7.6z';
+const TOE = 'M0 0C-1.9-2.8-3.4-6-3.3-8.8-3.1-11.8-1.4-13.5 .3-13.5 2.2-13.5 3.6-11.8 3.6-8.7 3.6-5.8 1.8-2.8 0 0Z';
+
+function CapybaraTrack({ paw = 'front', ...props }) {
+  const cx = 24;
+  const cy = 30;
+  const base = 11.5; // distância do centro do coxim até a raiz do dedo
   return (
-    <svg viewBox="0 0 40 56" aria-hidden="true" {...props}>
+    <svg viewBox="0 0 48 48" aria-hidden="true" {...props}>
       <g fill="currentColor">
-        <ellipse cx="19" cy="26" rx="12.5" ry="10" transform="rotate(-10 19 26)" />
-        <ellipse cx="21" cy="43.5" rx="7.5" ry="7" />
-        <circle cx="8" cy="14" r="4.4" />
-        <circle cx="15.8" cy="9.5" r="3.7" />
-        <circle cx="22.6" cy="8.8" r="3.4" />
-        <circle cx="28.6" cy="10.6" r="3.1" />
-        <circle cx="33.8" cy="14.4" r="2.8" />
+        <path d={PAD} />
+        {TOES[paw].map((t) => {
+          const rad = (t.a * Math.PI) / 180;
+          const x = (cx + base * Math.sin(rad)).toFixed(2);
+          const y = (cy - base * Math.cos(rad)).toFixed(2);
+          return <path key={t.a} d={TOE} transform={`translate(${x} ${y}) rotate(${t.a}) scale(${t.s})`} />;
+        })}
       </g>
     </svg>
   );
 }
 
-// Trilha que sobe da base à direita do painel de marca: pé esquerdo/direito alternados.
+// Trilha que sobe da base à direita do painel de marca: patas esquerda/direita alternadas.
 const TRAIL = [
-  { left: '5%', bottom: '11%', rot: 22, flip: false, w: 42, delay: 0 },
-  { left: '17%', bottom: '19%', rot: 18, flip: true, w: 40, delay: 0.18 },
-  { left: '30%', bottom: '28%', rot: 14, flip: false, w: 38, delay: 0.36 },
-  { left: '43%', bottom: '38%', rot: 10, flip: true, w: 36, delay: 0.54 },
-  { left: '57%', bottom: '49%', rot: 6, flip: false, w: 34, delay: 0.72 },
-  { left: '70%', bottom: '61%', rot: 2, flip: true, w: 32, delay: 0.9 },
-  { left: '82%', bottom: '74%', rot: -2, flip: false, w: 30, delay: 1.08 },
+  { left: '5%', bottom: '11%', rot: 24, flip: false, paw: 'front', w: 44, delay: 0 },
+  { left: '17%', bottom: '19%', rot: 16, flip: true, paw: 'hind', w: 41, delay: 0.18 },
+  { left: '30%', bottom: '28%', rot: 20, flip: false, paw: 'front', w: 39, delay: 0.36 },
+  { left: '43%', bottom: '38%', rot: 12, flip: true, paw: 'hind', w: 37, delay: 0.54 },
+  { left: '57%', bottom: '49%', rot: 14, flip: false, paw: 'front', w: 35, delay: 0.72 },
+  { left: '70%', bottom: '61%', rot: 6, flip: true, paw: 'hind', w: 33, delay: 0.9 },
+  { left: '82%', bottom: '74%', rot: 8, flip: false, paw: 'front', w: 31, delay: 1.08 },
 ];
 
 function FootprintTrail({ steps, opacity, className = '' }) {
@@ -44,7 +55,7 @@ function FootprintTrail({ steps, opacity, className = '' }) {
             animationDelay: `${s.delay}s`,
             '--pn-opacity': opacity,
           }}>
-          <Footprint style={{ transform: `rotate(${s.rot}deg)${s.flip ? ' scaleX(-1)' : ''}` }} />
+          <CapybaraTrack paw={s.paw} style={{ transform: `rotate(${s.rot}deg)${s.flip ? ' scaleX(-1)' : ''}` }} />
         </span>
       ))}
     </div>
@@ -85,7 +96,7 @@ export default function LoginPage() {
           style={{ background: 'radial-gradient(circle, rgba(155,231,196,.25), transparent 70%)' }} />
         <FootprintTrail steps={TRAIL} opacity={0.17} className="text-[#c8f79a]" />
 
-        <img src="/logo-light.svg" alt="PegadaNeutra" className="relative z-10 h-14 self-start" />
+        <img src="/logo-light.webp" alt="PegadaNeutra" className="relative z-10 h-16 self-start" />
         <div className="relative z-10">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Meça a pegada de carbono<br />dos seus eventos.
@@ -107,7 +118,7 @@ export default function LoginPage() {
         />
         <form onSubmit={submit} className="relative z-10 w-full max-w-sm space-y-5">
           <div className="lg:hidden flex justify-center mb-2">
-            <img src="/logo.svg" alt="PegadaNeutra" className="h-12" />
+            <img src="/logo.webp" alt="PegadaNeutra" className="h-14" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-(--ink)">Entrar no painel</h2>

@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'logo.svg', 'logo-light.svg'],
+      includeAssets: ['favicon.png', 'icon-192.png', 'icon-512.webp', 'logo.webp', 'logo-light.webp'],
       manifest: {
         name: 'PegadaNeutra — pegada de carbono do evento',
         short_name: 'PegadaNeutra',
@@ -17,12 +17,13 @@ export default defineConfig({
         theme_color: '#0b4d34',
         background_color: '#eaf4ee',
         icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any' },
         ],
       },
       workbox: {
         // app shell completo em cache: o totem funciona 100% offline após o primeiro carregamento
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         navigateFallback: 'index.html',
         runtimeCaching: [],
       },

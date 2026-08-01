@@ -6,7 +6,7 @@ dev-dist/
 .DS_Store
 .claude/
 
-# imagem-fonte da logo (processada em public/logo.png)
+# artes soltas na raiz — a arte oficial da marca fica em brand/
 ChatGPT Image*.png
 /logo.png
 
