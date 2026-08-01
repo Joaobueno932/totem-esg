@@ -34,6 +34,22 @@ body {
 .cz-brand .wm { font-size: 1.3rem; color: #fff; }
 .cz-brand .wm b { color: #9be7c4; }
 
+/* ---------- Pegadas (login) ---------- */
+/* Trilha decorativa: cada pegada surge em sequência, como alguém caminhando. */
+.pn-step {
+  position: absolute;
+  opacity: 0;
+  animation: pn-step .55s ease-out forwards;
+}
+.pn-step svg { width: 100%; height: auto; display: block; }
+@keyframes pn-step {
+  from { opacity: 0; transform: translateY(12px) scale(.86); }
+  to   { opacity: var(--pn-opacity, .16); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pn-step { animation: none; opacity: var(--pn-opacity, .16); }
+}
+
 /* ---------- Sidebar ---------- */
 .cz-sidebar { background: linear-gradient(180deg, #0d5a3d, #0b4d34 60%, #093f2b); }
 .cz-nav { display: flex; flex-direction: column; gap: 4px; }

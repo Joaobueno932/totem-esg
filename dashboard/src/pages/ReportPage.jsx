@@ -33,10 +33,10 @@ export default function ReportPage() {
   const scope = useMemo(() => describeScope(applied, events), [applied, events]);
   const dirty = JSON.stringify(filters) !== JSON.stringify(applied);
 
-  // O cabeçalho/rodapé do PDF usa o title da página; sem isso sai "EcoTrajeto — Painel".
+  // O cabeçalho/rodapé do PDF usa o title da página; sem isso sai "PegadaNeutra — Painel".
   function print() {
     const previous = document.title;
-    document.title = `Relatorio EcoTrajeto - ${report?.event?.name || 'consolidado'}`;
+    document.title = `Relatorio PegadaNeutra - ${report?.event?.name || 'consolidado'}`;
     window.print();
     setTimeout(() => { document.title = previous; }, 500);
   }
@@ -112,7 +112,7 @@ export default function ReportPage() {
       {report && !loading && (
         <div className="print-page mx-auto max-w-3xl rounded-xl bg-white border border-black/10 p-10 space-y-8">
           <header className="border-b border-(--grid) pb-6">
-            <p className="text-sm text-emerald-800 font-semibold">🌱 Relatório EcoTrajeto — transporte de participantes</p>
+            <p className="text-sm text-emerald-800 font-semibold">🌱 Relatório PegadaNeutra — transporte de participantes</p>
             <h2 className="text-3xl font-bold mt-1">{report.event ? report.event.name : 'Relatório consolidado'}</h2>
             <p className="text-(--ink-2) mt-1">
               {report.event ? (

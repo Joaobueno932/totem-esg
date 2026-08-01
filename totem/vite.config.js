@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'logo.svg', 'logo-light.svg'],
       manifest: {
-        name: 'EcoTrajeto — pegada de carbono do evento',
-        short_name: 'EcoTrajeto',
+        name: 'PegadaNeutra — pegada de carbono do evento',
+        short_name: 'PegadaNeutra',
         description: 'Calcule a emissão estimada de CO2e do seu deslocamento até o evento',
         display: 'fullscreen',
         orientation: 'portrait',

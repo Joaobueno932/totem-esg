@@ -3,5 +3,5 @@ import { config } from './config.js';
 
 const app = createApp();
 app.listen(config.port, () => {
-  console.log(`API EcoTrajeto rodando em http://localhost:${config.port}`);
+  console.log(`API PegadaNeutra rodando em http://localhost:${config.port}`);
 });
