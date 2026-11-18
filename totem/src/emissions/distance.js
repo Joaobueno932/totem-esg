@@ -25,11 +25,11 @@ function roundKm(km) {
   return Math.round(km / 10) * 10;
 }
 
-// Distância só de ida, em km; null quando falta cidade/coordenada ou é a mesma cidade.
+// Distância só de ida, em km; 0 quando é a mesma cidade do evento (não dá para estimar
+// o deslocamento dentro dela) e null quando falta cidade/coordenada.
 export function estimateDistanceKm({ fromUf, fromCity, toUf, toCity, mode }) {
   const from = cityCoords(fromUf, fromCity);
   const to = cityCoords(toUf, toCity);
   if (!from || !to) return null;
-  const km = roundKm(haversineKm(from, to) * (ROUTE_FACTOR[mode] ?? DEFAULT_ROUTE_FACTOR));
-  return km >= 1 ? km : null;
+  return roundKm(haversineKm(from, to) * (ROUTE_FACTOR[mode] ?? DEFAULT_ROUTE_FACTOR));
 }

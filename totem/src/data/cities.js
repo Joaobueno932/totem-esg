@@ -7,8 +7,10 @@ export function cityNames(uf) {
   return (CITIES_BY_UF[uf] || []).map(([name]) => name);
 }
 
-// A cidade do evento vem do CEP (ViaCEP), então a comparação ignora acento e caixa.
-const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+// A cidade do evento vem do CEP (ViaCEP) ou é digitada no dashboard: a comparação
+// ignora acento, caixa e um sufixo de UF ("Campo Grande - MS", "Campo Grande/MS").
+const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/\s*(?:[-/,]\s*|\()[a-z]{2}\)?\s*$/, '').trim();
 
 // [lat, lon] da sede do município, ou null se não houver
 export function cityCoords(uf, city) {

@@ -169,7 +169,12 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                   onChange={(e) => setField('distance')(e.target.value)}
                   maxLength={7}
                 />
-                {estimate && (
+                {estimate === 0 && (
+                  <span className="estimate">
+                    Você saiu de {participant.city}, a mesma cidade do evento: informe quantos km rodou até aqui.
+                  </span>
+                )}
+                {estimate > 0 && (
                   <span className="estimate">
                     <span>
                       Estimativa: <strong>{estimate.toLocaleString('pt-BR')} km</strong>
