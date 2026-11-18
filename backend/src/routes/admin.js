@@ -184,6 +184,23 @@ adminRouter.get('/answers', asyncHandler(async (req, res) => {
   res.json(rows);
 }));
 
+// Exclui respostas inteiras (todos os trechos), ex.: testes feitos no totem.
+// Remove o participante da resposta; os trechos saem junto por cascata (FK ON DELETE CASCADE).
+const deleteAnswersSchema = z.object({
+  local_uuids: z.array(z.string().uuid()).min(1).max(5000),
+});
+
+adminRouter.post('/answers/delete', requireEventManager, asyncHandler(async (req, res) => {
+  const parsed = deleteAnswersSchema.safeParse(req.body);
+  if (!parsed.success) return invalid(res, parsed);
+  const { rowCount } = await query(
+    `DELETE FROM participants
+      WHERE id IN (SELECT participant_id FROM transport_answers WHERE local_uuid = ANY($1::uuid[]))`,
+    [parsed.data.local_uuids]
+  );
+  res.json({ deleted: rowCount });
+}));
+
 // ---------- Indicadores ----------
 
 adminRouter.get('/stats', asyncHandler(async (req, res) => {
