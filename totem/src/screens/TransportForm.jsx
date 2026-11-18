@@ -10,6 +10,8 @@ const emptyDraft = () => ({ mode: null, fuel: '', distance: '', roundTrip: true,
 const MODE_LABEL = Object.fromEntries(MODES.map((m) => [m.id, m.label]));
 const MODE_ICON = Object.fromEntries(MODES.map((m) => [m.id, m.icon]));
 
+const fmtKm = (km) => km.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
 export default function TransportForm({ participant, event, onSubmit, onBack }) {
   // trechos já confirmados (ex.: ônibus até o aeroporto → avião → táxi até o evento)
   const [legs, setLegs] = useState([]);
@@ -19,6 +21,8 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
   const modeInfo = MODES.find((m) => m.id === draft.mode);
   const fuels = draft.mode && modeInfo?.hasFuel ? fuelsForMode(draft.mode) : [];
   const full = legs.length >= MAX_LEGS;
+
+  const draftKm = parseFloat(String(draft.distance).replace(',', '.'));
 
   // sugestão: cidade de origem (passo 1) → cidade do evento (cadastro do evento)
   const estimate = draft.mode ? estimateDistanceKm({
@@ -107,7 +111,9 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                 <small>
                   {leg.transport_mode === 'bicicleta_pe'
                     ? 'sem emissão'
-                    : `${leg.distance_km} km · ${leg.round_trip ? 'ida e volta' : 'somente ida'}`}
+                    : leg.round_trip
+                      ? `${fmtKm(leg.distance_km)} km × 2 = ${fmtKm(leg.distance_km * 2)} km (ida e volta)`
+                      : `${fmtKm(leg.distance_km)} km · somente ida`}
                 </small>
               </span>
               <button type="button" className="leg-remove" onClick={() => removeLeg(i)} aria-label={`Remover ${MODE_LABEL[leg.transport_mode]}`}>
@@ -161,7 +167,7 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
               )}
 
               <label>
-                Distância aproximada deste trecho (km)*
+                Distância aproximada deste trecho, só a ida (km)*
                 <input
                   inputMode="decimal"
                   placeholder="Ex.: 25"
@@ -177,7 +183,7 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                 {estimate > 0 && (
                   <span className="estimate">
                     <span>
-                      Estimativa: <strong>{estimate.toLocaleString('pt-BR')} km</strong>
+                      Estimativa da ida: <strong>{fmtKm(estimate)} km</strong>
                       {' '}de {participant.city} até {event.city}
                     </span>
                     {draft.distance !== String(estimate) && (
@@ -200,6 +206,12 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                     Somente ida
                   </button>
                 </div>
+                {/* a volta é somada no cálculo (calc.js): o campo de km é só a ida */}
+                {draft.roundTrip && draftKm > 0 && (
+                  <span className="estimate">
+                    <span>Total considerado: <strong>{fmtKm(draftKm * 2)} km</strong> ({fmtKm(draftKm)} km de ida + {fmtKm(draftKm)} km de volta)</span>
+                  </span>
+                )}
               </div>
 
               {modeInfo.hasPassengers && (
