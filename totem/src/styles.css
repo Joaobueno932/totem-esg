@@ -168,6 +168,18 @@ select:disabled { background: var(--g-50); color: #93a49a; }
 
 .error { color: var(--error); font-size: .98rem; font-weight: 600; }
 
+/* Estimativa de distância origem → evento, logo abaixo do campo de km */
+.estimate {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  color: var(--g-700); font-size: .95rem; font-weight: 500;
+}
+.estimate strong { font-weight: 800; }
+.estimate-use {
+  border: 2px solid var(--g-600); background: var(--g-100); color: var(--g-900);
+  border-radius: 999px; padding: 6px 16px; font-size: .95rem; font-weight: 700;
+  cursor: pointer; min-height: 40px;
+}
+
 .check {
   flex-direction: row !important; align-items: flex-start;
   gap: 13px !important; font-weight: 500 !important; font-size: 1.02rem;

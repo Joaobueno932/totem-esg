@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MODES, fuelsForMode } from '../emissions/calc.js';
+import { estimateDistanceKm } from '../emissions/distance.js';
 
 // Trechos por resposta — mesmo limite validado pelo backend em routes/sync.js
 export const MAX_LEGS = 6;
@@ -9,7 +10,7 @@ const emptyDraft = () => ({ mode: null, fuel: '', distance: '', roundTrip: true,
 const MODE_LABEL = Object.fromEntries(MODES.map((m) => [m.id, m.label]));
 const MODE_ICON = Object.fromEntries(MODES.map((m) => [m.id, m.icon]));
 
-export default function TransportForm({ onSubmit, onBack }) {
+export default function TransportForm({ participant, event, onSubmit, onBack }) {
   // trechos já confirmados (ex.: ônibus até o aeroporto → avião → táxi até o evento)
   const [legs, setLegs] = useState([]);
   const [draft, setDraft] = useState(emptyDraft());
@@ -18,6 +19,12 @@ export default function TransportForm({ onSubmit, onBack }) {
   const modeInfo = MODES.find((m) => m.id === draft.mode);
   const fuels = draft.mode && modeInfo?.hasFuel ? fuelsForMode(draft.mode) : [];
   const full = legs.length >= MAX_LEGS;
+
+  // sugestão: cidade de origem (passo 1) → cidade do evento (cadastro do evento)
+  const estimate = draft.mode ? estimateDistanceKm({
+    fromUf: participant?.state, fromCity: participant?.city,
+    toUf: event?.state, toCity: event?.city, mode: draft.mode,
+  }) : null;
 
   const setField = (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
 
@@ -162,6 +169,19 @@ export default function TransportForm({ onSubmit, onBack }) {
                   onChange={(e) => setField('distance')(e.target.value)}
                   maxLength={7}
                 />
+                {estimate && (
+                  <span className="estimate">
+                    <span>
+                      Estimativa: <strong>{estimate.toLocaleString('pt-BR')} km</strong>
+                      {' '}de {participant.city} até {event.city}
+                    </span>
+                    {draft.distance !== String(estimate) && (
+                      <button type="button" className="estimate-use" onClick={() => setField('distance')(String(estimate))}>
+                        Usar
+                      </button>
+                    )}
+                  </span>
+                )}
                 {errors.distance && <span className="error">{errors.distance}</span>}
               </label>
 

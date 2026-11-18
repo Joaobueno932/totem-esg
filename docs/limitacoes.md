@@ -7,7 +7,10 @@ um inventário auditável de gases de efeito estufa.
 ## Limitações dos dados de entrada
 
 - **Distância autodeclarada**: o participante informa um valor aproximado, sem
-  verificação por rota real.
+  verificação por rota real. O totem sugere uma estimativa (linha reta entre as
+  sedes do município de origem e da cidade do evento, × 1,2 para trajetos por
+  terra e × 1 para avião), mas o valor gravado é sempre o que o participante
+  confirma no campo. Sem cidade/UF no cadastro do evento, não há sugestão.
 - **Ocupação do veículo autodeclarada**: o rateio por ocupante depende do
   número informado.
 - **Trechos autodeclarados**: trajetos multimodais (ex.: ônibus + avião + app)
