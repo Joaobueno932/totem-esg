@@ -1,16 +1,20 @@
-import { useState } from 'react';
-import CITIES_BY_UF from '../data/cities.json';
+import { useMemo, useState } from 'react';
+import { UFS, cityNames } from '../data/cities.js';
 
-const UFS = Object.keys(CITIES_BY_UF);
+const EMPTY_FORM = {
+  name: '', company: '', email: '', phone: '', city: '', state: '',
+  consent_lgpd: false, consent_marketing: false,
+};
 
 export default function ParticipantForm({ initial, onNext, onBack }) {
-  const [form, setForm] = useState(initial || {
-    name: '', company: '', email: '', phone: '', city: '', state: '',
-    consent_lgpd: false, consent_marketing: false,
-  });
+  // Ao voltar do passo 2, empresa/telefone vazios chegam como null (normalizados no
+  // envio); sem voltar a '' o .trim() do envio quebrava e não dava para avançar de novo.
+  const [form, setForm] = useState(() => (initial
+    ? { ...initial, company: initial.company || '', phone: initial.phone || '' }
+    : EMPTY_FORM));
   const [errors, setErrors] = useState({});
 
-  const cities = CITIES_BY_UF[form.state] || [];
+  const cities = useMemo(() => cityNames(form.state), [form.state]);
 
   const set = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;

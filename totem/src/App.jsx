@@ -70,6 +70,11 @@ export default function App() {
     saveDraft({ step: 'transport', participant: data });
   }
 
+  function handleBackToParticipant() {
+    setStep('participant');
+    saveDraft({ step: 'participant', participant });
+  }
+
   // recebe os trechos do deslocamento (1 a 6); a emissão da resposta é a soma deles
   async function handleTransport(legs) {
     const transports = legs.map((leg) => ({
@@ -121,7 +126,12 @@ export default function App() {
           <ParticipantForm initial={participant} onNext={handleParticipant} onBack={handleFinish} />
         )}
         {step === 'transport' && (
-          <TransportForm onSubmit={handleTransport} onBack={() => setStep('participant')} />
+          <TransportForm
+            participant={participant}
+            event={eventState.event}
+            onSubmit={handleTransport}
+            onBack={handleBackToParticipant}
+          />
         )}
         {step === 'result' && <ResultScreen result={result} onFinish={handleFinish} />}
       </main>
