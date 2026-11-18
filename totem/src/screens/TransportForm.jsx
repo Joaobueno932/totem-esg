@@ -22,13 +22,15 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
   const fuels = draft.mode && modeInfo?.hasFuel ? fuelsForMode(draft.mode) : [];
   const full = legs.length >= MAX_LEGS;
 
-  const draftKm = parseFloat(String(draft.distance).replace(',', '.'));
-
-  // sugestão: cidade de origem (passo 1) → cidade do evento (cadastro do evento)
-  const estimate = draft.mode ? estimateDistanceKm({
-    fromUf: participant?.state, fromCity: participant?.city,
-    toUf: event?.state, toCity: event?.city, mode: draft.mode,
-  }) : null;
+  // Estimativa já no trajeto escolhido (ida ou ida e volta), como o km do campo.
+  const estimateFor = (mode, roundTrip) => {
+    const oneWay = mode ? estimateDistanceKm({
+      fromUf: participant?.state, fromCity: participant?.city,
+      toUf: event?.state, toCity: event?.city, mode,
+    }) : null;
+    return oneWay == null ? null : oneWay * (roundTrip ? 2 : 1);
+  };
+  const estimate = estimateFor(draft.mode, draft.roundTrip);
 
   const setField = (key) => (value) => setDraft((d) => ({ ...d, [key]: value }));
 
@@ -37,10 +39,26 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
     setErrors({});
   }
 
+  // Se o km do campo é a estimativa, ele acompanha a troca de trajeto (660 ↔ 1.320).
+  function selectRoundTrip(roundTrip) {
+    setDraft((d) => {
+      const previous = estimateFor(d.mode, d.roundTrip);
+      const usingEstimate = previous != null && d.distance === String(previous);
+      return {
+        ...d,
+        roundTrip,
+        distance: usingEstimate ? String(estimateFor(d.mode, roundTrip)) : d.distance,
+      };
+    });
+  }
+
   // Valida o trecho em edição e o converte no formato enviado ao backend.
   function buildLeg() {
     const errs = {};
-    const km = parseFloat(String(draft.distance).replace(',', '.'));
+    // O participante informa o total do trajeto; o backend guarda a ida e dobra
+    // no cálculo quando round_trip (calc.js / services/emissions.js).
+    const totalKm = parseFloat(String(draft.distance).replace(',', '.'));
+    const km = draft.roundTrip ? totalKm / 2 : totalKm;
     if (!draft.mode) errs.mode = 'Escolha como você chegou';
     if (modeInfo?.hasFuel && !draft.fuel) errs.fuel = 'Escolha o combustível';
     if (draft.mode && draft.mode !== 'bicicleta_pe' && (Number.isNaN(km) || km < 0 || km > 50000)) {
@@ -112,7 +130,7 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                   {leg.transport_mode === 'bicicleta_pe'
                     ? 'sem emissão'
                     : leg.round_trip
-                      ? `${fmtKm(leg.distance_km)} km × 2 = ${fmtKm(leg.distance_km * 2)} km (ida e volta)`
+                      ? `${fmtKm(leg.distance_km * 2)} km · ida e volta`
                       : `${fmtKm(leg.distance_km)} km · somente ida`}
                 </small>
               </span>
@@ -166,8 +184,22 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                 </div>
               )}
 
+              <div className="field-group">
+                <span className="field-label">Trajeto</span>
+                <div className="chip-row">
+                  <button type="button" className={`chip ${draft.roundTrip ? 'selected' : ''}`} onClick={() => selectRoundTrip(true)}>
+                    Ida e volta
+                  </button>
+                  <button type="button" className={`chip ${!draft.roundTrip ? 'selected' : ''}`} onClick={() => selectRoundTrip(false)}>
+                    Somente ida
+                  </button>
+                </div>
+              </div>
+
               <label>
-                Distância aproximada deste trecho, só a ida (km)*
+                {draft.roundTrip
+                  ? 'Distância aproximada deste trecho, ida e volta (km)*'
+                  : 'Distância aproximada deste trecho, só a ida (km)*'}
                 <input
                   inputMode="decimal"
                   placeholder="Ex.: 25"
@@ -183,7 +215,7 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                 {estimate > 0 && (
                   <span className="estimate">
                     <span>
-                      Estimativa da ida: <strong>{fmtKm(estimate)} km</strong>
+                      Estimativa {draft.roundTrip ? 'ida e volta' : 'só de ida'}: <strong>{fmtKm(estimate)} km</strong>
                       {' '}de {participant.city} até {event.city}
                     </span>
                     {draft.distance !== String(estimate) && (
@@ -195,24 +227,6 @@ export default function TransportForm({ participant, event, onSubmit, onBack }) 
                 )}
                 {errors.distance && <span className="error">{errors.distance}</span>}
               </label>
-
-              <div className="field-group">
-                <span className="field-label">Trajeto</span>
-                <div className="chip-row">
-                  <button type="button" className={`chip ${draft.roundTrip ? 'selected' : ''}`} onClick={() => setField('roundTrip')(true)}>
-                    Ida e volta
-                  </button>
-                  <button type="button" className={`chip ${!draft.roundTrip ? 'selected' : ''}`} onClick={() => setField('roundTrip')(false)}>
-                    Somente ida
-                  </button>
-                </div>
-                {/* a volta é somada no cálculo (calc.js): o campo de km é só a ida */}
-                {draft.roundTrip && draftKm > 0 && (
-                  <span className="estimate">
-                    <span>Total considerado: <strong>{fmtKm(draftKm * 2)} km</strong> ({fmtKm(draftKm)} km de ida + {fmtKm(draftKm)} km de volta)</span>
-                  </span>
-                )}
-              </div>
 
               {modeInfo.hasPassengers && (
                 <div className="field-group">
