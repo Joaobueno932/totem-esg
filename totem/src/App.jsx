@@ -173,7 +173,7 @@ function EventGate({ status }) {
     <div className="app">
       <main className="app-main">
         <div className="screen center">
-          <img className="brand-logo" src="/logo.webp" alt="PegadaNeutra" />
+          <img className="brand-logo" src="/logo.webp" alt="Pegada de Carbono" />
           <div className="badge-leaf">{m.icon}</div>
           <h2>{m.title}</h2>
           {m.text && <p className="intro">{m.text}</p>}

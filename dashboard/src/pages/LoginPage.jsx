@@ -47,13 +47,13 @@ function FootprintTrail({ steps, opacity, className = '' }) {
       {steps.map((s, i) => (
         <span
           key={i}
-          className="pn-step"
+          className="pc-step"
           style={{
             left: s.left,
             bottom: s.bottom,
             width: s.w,
             animationDelay: `${s.delay}s`,
-            '--pn-opacity': opacity,
+            '--pc-opacity': opacity,
           }}>
           <CapybaraTrack paw={s.paw} style={{ transform: `rotate(${s.rot}deg)${s.flip ? ' scaleX(-1)' : ''}` }} />
         </span>
@@ -97,13 +97,13 @@ export default function LoginPage() {
           style={{ background: 'radial-gradient(circle, rgba(155,231,196,.25), transparent 70%)' }} />
         <FootprintTrail steps={TRAIL} opacity={0.17} className="text-[#c8f79a]" />
 
-        <img src="/logo-light.webp" alt="PegadaNeutra" className="relative z-10 h-16 self-start" />
+        <img src="/logo-light.webp" alt="Pegada de Carbono" className="relative z-10 h-16 self-start" />
         <div className="relative z-10">
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Meça a pegada de carbono<br />dos seus eventos.
           </h1>
           <p className="mt-4 text-emerald-100/90 max-w-md text-lg">
-            Cada participante informa como chegou; o PegadaNeutra calcula a emissão de CO₂e
+            Cada participante informa como chegou; o sistema calcula a emissão de CO₂e
             do transporte e consolida tudo em relatórios.
           </p>
         </div>
@@ -119,7 +119,7 @@ export default function LoginPage() {
         />
         <form onSubmit={submit} className="relative z-10 w-full max-w-sm space-y-5">
           <div className="lg:hidden flex justify-center mb-2">
-            <img src="/logo.webp" alt="PegadaNeutra" className="h-14" />
+            <img src="/logo.webp" alt="Pegada de Carbono" className="h-14" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-(--ink)">Entrar no painel</h2>

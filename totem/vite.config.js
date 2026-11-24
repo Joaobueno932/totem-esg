@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'icon-192.png', 'icon-512.webp', 'logo.webp', 'logo-light.webp'],
       manifest: {
-        name: 'PegadaNeutra — pegada de carbono do evento',
-        short_name: 'PegadaNeutra',
+        name: 'Pegada de Carbono do evento',
+        short_name: 'Pegada de Carbono',
         description: 'Calcule a emissão estimada de CO2e do seu deslocamento até o evento',
         display: 'fullscreen',
         orientation: 'portrait',

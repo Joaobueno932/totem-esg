@@ -36,18 +36,18 @@ body {
 
 /* ---------- Pegadas (login) ---------- */
 /* Trilha decorativa: cada pegada surge em sequência, como alguém caminhando. */
-.pn-step {
+.pc-step {
   position: absolute;
   opacity: 0;
-  animation: pn-step .55s ease-out forwards;
+  animation: pc-step .55s ease-out forwards;
 }
-.pn-step svg { width: 100%; height: auto; display: block; }
-@keyframes pn-step {
+.pc-step svg { width: 100%; height: auto; display: block; }
+@keyframes pc-step {
   from { opacity: 0; transform: translateY(12px) scale(.86); }
-  to   { opacity: var(--pn-opacity, .16); transform: none; }
+  to   { opacity: var(--pc-opacity, .16); transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pn-step { animation: none; opacity: var(--pn-opacity, .16); }
+  .pc-step { animation: none; opacity: var(--pc-opacity, .16); }
 }
 
 /* ---------- Sidebar ---------- */
