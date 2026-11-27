@@ -37,14 +37,6 @@ export function getEventSlug() {
   return path ? decodeURIComponent(path.split('/')[0]) : '';
 }
 
-// Link público do evento, o mesmo do QR code ("Compartilhar resultado"). Leva o ?api=
-// só quando a API veio do link/cache — como faz o dashboard ao gerar o QR.
-export function eventLink(slug) {
-  const base = `${window.location.origin}/${encodeURIComponent(slug)}`;
-  const api = getApiUrl();
-  return ALLOW_API_OVERRIDE && api && api !== BUILD_API ? `${base}?api=${encodeURIComponent(api)}` : base;
-}
-
 // Remove o ?api=... da barra de endereço depois de resolvido (link fica limpo).
 export function cleanUrl() {
   if (window.location.search) {

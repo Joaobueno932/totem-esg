@@ -60,32 +60,6 @@ describe('getApiUrl', () => {
   });
 });
 
-describe('eventLink', () => {
-  async function loadAt(opts) {
-    const mod = await load(opts);
-    window.location.origin = 'https://totem.exemplo';
-    return mod;
-  }
-
-  it('API na mesma origem: só o link do evento', async () => {
-    const { eventLink } = await loadAt();
-    expect(eventLink('festa-junina')).toBe('https://totem.exemplo/festa-junina');
-  });
-
-  it('API vinda do link/cache vai junto, como no QR do dashboard', async () => {
-    const { eventLink } = await loadAt({ storage: { 'carbono-zero-api-url': 'https://api.netlify.app' } });
-    expect(eventLink('festa')).toBe('https://totem.exemplo/festa?api=https%3A%2F%2Fapi.netlify.app');
-  });
-
-  it('com a API fixa no build o link não carrega ?api=', async () => {
-    const { eventLink } = await loadAt({
-      env: { VITE_API_URL: 'https://api.exemplo.com', VITE_ALLOW_API_OVERRIDE: 'false' },
-      storage: { 'carbono-zero-api-url': 'https://outro.example' },
-    });
-    expect(eventLink('festa')).toBe('https://totem.exemplo/festa');
-  });
-});
-
 describe('getEventSlug', () => {
   it('lê o primeiro segmento do caminho', async () => {
     const { getEventSlug } = await load();

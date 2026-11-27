@@ -3,7 +3,6 @@ import Icon from '../components/Icon.jsx';
 import StepLayout from '../components/StepLayout.jsx';
 import { formatKg } from '../emissions/calc.js';
 import { legDistanceText, legTitle } from '../flow.js';
-import { eventLink } from '../config.js';
 import { answerStatus } from '../db.js';
 import { onSyncChange, trySync } from '../sync.js';
 import { storyTemplateFor } from '../story/templates.js';
@@ -49,26 +48,9 @@ function useCountUp(value, duration = 900) {
 export default function ResultScreen({ result, event, online, onFinish }) {
   const { total, transports, local_uuid: localUuid, from } = result;
   const shown = useCountUp(total);
-  const [copied, setCopied] = useState(false);
-  const canShare = !!(navigator.share || navigator.clipboard?.writeText);
   const destination = [event.city, event.state].filter(Boolean).join('/');
+  // compartilhar é só pela arte (cartão abaixo do valor), nos eventos que têm uma
   const story = storyTemplateFor(event);
-
-  // O texto compartilhado leva só a emissão e o link do evento — nada de nome, e-mail ou telefone.
-  async function share() {
-    const text = `Calculei a pegada de carbono do meu deslocamento até ${event.name ? `o evento ${event.name}` : 'o evento'}: `
-      + `${formatKg(total)} kg CO₂e. Calcule a sua também!`;
-    const url = eventLink(event.slug);
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Pegada de Carbono', text, url });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} ${url}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch { /* compartilhamento cancelado ou bloqueado */ }
-  }
 
   return (
     <StepLayout
@@ -77,16 +59,11 @@ export default function ResultScreen({ result, event, online, onFinish }) {
         title: 'Prontinho! Descobrimos sua emissão estimada!',
         text: transports.length > 1 ? `Somei os ${transports.length} trechos do seu deslocamento.` : 'Aqui está o resultado do seu deslocamento.',
       }}
-      actions={<div className="actions-stack">
+      actions={
         <button type="button" className="btn btn-primary btn-lg" onClick={onFinish}>
           Finalizar <Icon name="check" />
         </button>
-        {canShare && (
-          <button type="button" className="btn btn-outline btn-lg" onClick={share}>
-            <Icon name="share" /> {copied ? 'Texto copiado!' : 'Compartilhar resultado'}
-          </button>
-        )}
-      </div>}
+      }
     >
       <div className="result-card">
         <p className="result-label"><Icon name="leaf" size={20} /> Sua emissão estimada é de</p>
