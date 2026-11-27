@@ -59,7 +59,7 @@ npm run build && npm run preview      # http://localhost:4173/<slug>
 
 ```bash
 npm run lint
-npm test               # cálculo de emissões e resolução da URL da API
+npm test               # cálculo, regras do fluxo, rascunho, busca de cidades e URL da API
 npm run build          # gera dist/ (app + service worker)
 ```
 
@@ -129,5 +129,11 @@ repositórios.
 - `scripts/fetch-cities.mjs` regenera `src/data/cities.json` (municípios do IBGE com
   coordenadas, usados para estimar a distância offline). Precisa de internet. Atrás de
   proxy corporativo, use `node --use-system-ca scripts/fetch-cities.mjs`.
+- `src/assets/eva/*.webp` são recortes das artes oficiais da Eva em `brand/eva/*.png`
+  (cabeça ao quadril, todas na mesma escala: figura inteira com 760 px de altura,
+  WebP qualidade 72). Ao trocar uma arte, gere o WebP com o mesmo recorte e atualize
+  `width`/`height` em `src/components/Eva.jsx`.
+- A fonte Poppins (`src/assets/fonts`, licença SIL OFL) vai embutida no app para
+  funcionar offline; nada é carregado de CDN.
 - `netlify.toml` e `vercel.json` servem às hospedagens estáticas atuais e não são
   usados no Azure.

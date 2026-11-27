@@ -29,7 +29,12 @@ sincroniza normalmente a fila que acumulou.
 O IndexedDB é persistente: fechar o navegador, recarregar a página ou cair a
 energia **não** apaga a fila. Além disso, o formulário em andamento é salvo em
 `localStorage` como rascunho — se a página recarregar no meio do preenchimento,
-o participante continua de onde parou.
+o participante continua de onde parou. O rascunho (`src/draft.js`):
+
+- pertence ao evento em que foi iniciado: o link de outro evento abre limpo;
+- expira em 24 h;
+- depois do envio guarda só o resultado (sem dados pessoais), para a tela de
+  resultado sobreviver a um recarregamento até o participante tocar em "Finalizar".
 
 ### 3. Fila de sincronização — envio automático
 
@@ -55,9 +60,14 @@ Regras:
 
 ## Monitoramento
 
-- **No totem**: a tela inicial mostra o estado da conexão e quantas respostas
-  aguardam envio. A fila sincroniza sozinha (ao voltar a conexão, a cada 60 s e
-  após cada resposta).
+- **No app**: a tela inicial mostra o estado da conexão e quantas respostas
+  aguardam envio; as etapas avisam quando não há internet; o resultado e a tela
+  de encerramento dizem se a resposta já foi enviada ou está salva no aparelho.
+  A fila sincroniza sozinha (ao voltar a conexão, a cada 60 s e após cada resposta).
+- **No celular do participante**: a sincronização roda enquanto a página está
+  aberta (não há Background Sync). Uma resposta feita sem internet é enviada quando
+  a conexão volta com a página aberta, ou na próxima vez que o link do evento for
+  aberto no mesmo navegador.
 - **No dashboard**: a página **Sincronização** lista tudo que chegou ao
   servidor (`ok`, `duplicate`, `recalculated`, `error`) com mensagens de erro.
 

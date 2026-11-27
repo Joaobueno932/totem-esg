@@ -1,50 +1,156 @@
-import { useEffect } from 'react';
-import { formatKg, MODES } from '../emissions/calc.js';
+import { useEffect, useState } from 'react';
+import Icon from '../components/Icon.jsx';
+import StepLayout from '../components/StepLayout.jsx';
+import { formatKg } from '../emissions/calc.js';
+import { legDistanceText, legTitle } from '../flow.js';
+import { eventLink } from '../config.js';
+import { answerStatus } from '../db.js';
+import { onSyncChange, trySync } from '../sync.js';
 
-const MODE_LABEL = Object.fromEntries(MODES.map((m) => [m.id, m.label]));
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+// Conta de 0 até o valor (só apresentação: o último quadro é exatamente o valor calculado).
+function useCountUp(value, duration = 900) {
+  const [shown, setShown] = useState(() => (reducedMotion() ? value : 0));
+  useEffect(() => {
+    if (reducedMotion()) {
+      setShown(value);
+      return undefined;
+    }
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / duration);
+      setShown(p < 1 ? value * (1 - (1 - p) ** 3) : value);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return shown;
+}
 
 // Tela final: mostra APENAS a emissão individual do participante.
-// Nenhum dado consolidado do evento aparece aqui.
-export default function ResultScreen({ result, onFinish }) {
-  const { total, transports } = result;
+// Nenhum dado consolidado do evento aparece aqui. Fica na tela até "Finalizar"
+// (sem a volta automática do modo totem) e sobrevive a um recarregamento.
+export default function ResultScreen({ result, event, online, onFinish }) {
+  const { total, transports, local_uuid: localUuid, from } = result;
+  const shown = useCountUp(total);
+  const [copied, setCopied] = useState(false);
+  const canShare = !!(navigator.share || navigator.clipboard?.writeText);
+  const destination = [event.city, event.state].filter(Boolean).join('/');
 
-  // volta sozinho ao início após 60 s, caso o participante vá embora sem tocar em "Finalizar"
-  useEffect(() => {
-    const timer = setTimeout(onFinish, 60_000);
-    return () => clearTimeout(timer);
-  }, [onFinish]);
+  // O texto compartilhado leva só a emissão e o link do evento — nada de nome, e-mail ou telefone.
+  async function share() {
+    const text = `Calculei a pegada de carbono do meu deslocamento até ${event.name ? `o evento ${event.name}` : 'o evento'}: `
+      + `${formatKg(total)} kg CO₂e. Calcule a sua também!`;
+    const url = eventLink(event.slug);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Pegada de Carbono', text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { /* compartilhamento cancelado ou bloqueado */ }
+  }
 
   return (
-    <div className="screen center">
-      <div className="badge-leaf">✅</div>
-      <h2>Obrigado por participar!</h2>
-
-      <p className="result-lead">
-        {transports.length > 1
-          ? `Somando os ${transports.length} trechos, sua emissão estimada foi de`
-          : 'Sua emissão estimada neste deslocamento foi de'}
-      </p>
-      <div className="result-value">
-        {formatKg(total)} <span className="result-unit">kg CO₂e</span>
+    <StepLayout
+      screen="result" title="Resultado" pose="comemorando"
+      bubble={{
+        title: 'Prontinho! Descobrimos sua emissão estimada!',
+        text: transports.length > 1 ? `Somei os ${transports.length} trechos do seu deslocamento.` : 'Aqui está o resultado do seu deslocamento.',
+      }}
+      actions={<div className="actions-stack">
+        <button type="button" className="btn btn-primary btn-lg" onClick={onFinish}>
+          Finalizar <Icon name="check" />
+        </button>
+        {canShare && (
+          <button type="button" className="btn btn-outline btn-lg" onClick={share}>
+            <Icon name="share" /> {copied ? 'Texto copiado!' : 'Compartilhar resultado'}
+          </button>
+        )}
+      </div>}
+    >
+      <div className="result-card">
+        <p className="result-label"><Icon name="leaf" size={20} /> Sua emissão estimada é de</p>
+        <p className="result-value">
+          <span aria-hidden="true">{formatKg(shown)}</span>
+          <span className="sr-only">{formatKg(total)}</span>
+          <span className="result-unit">kg CO₂e</span>
+        </p>
       </div>
 
-      {transports.length > 1 && (
-        <ul className="leg-breakdown">
+      <p className="note">
+        <Icon name="info" size={20} />
+        <span>
+          É a quantidade estimada de gases de efeito estufa (em CO₂ equivalente) gerada pelo seu
+          deslocamento para participar deste evento.
+        </span>
+      </p>
+
+      <section className="summary" aria-labelledby="summary-title">
+        <h2 className="section-title" id="summary-title">Resumo do seu deslocamento</h2>
+        {from && destination && (
+          <p className="route"><Icon name="route" size={18} /> {from} <span aria-hidden="true">→</span><span className="sr-only">até</span> {destination}</p>
+        )}
+        <ul className="breakdown">
           {transports.map((t, i) => (
             <li key={i}>
-              <span>{MODE_LABEL[t.transport_mode] || t.transport_mode}</span>
-              <span className="leg-kg">{formatKg(t.emission_kg_co2e)} kg</span>
+              <span className="leg-icon"><Icon name={t.transport_mode} size={24} strokeWidth={1.8} /></span>
+              <span className="leg-text">
+                <strong>{legTitle(t)}</strong>
+                <small>
+                  {legDistanceText(t)}
+                  {t.passengers_in_vehicle > 1 && ` · ${t.passengers_in_vehicle} pessoas`}
+                </small>
+              </span>
+              <span className="leg-kg">{formatKg(t.emission_kg_co2e)}<small> kg CO₂e</small></span>
             </li>
           ))}
         </ul>
-      )}
+      </section>
 
       <p className="edu-note">
         Pequenas escolhas — como carona compartilhada, transporte coletivo ou bicicleta —
         reduzem bastante a pegada de carbono dos seus deslocamentos.
       </p>
 
-      <button className="btn-primary btn-xl" onClick={onFinish}>Finalizar</button>
-    </div>
+      <SyncStatus localUuid={localUuid} online={online} />
+    </StepLayout>
   );
+}
+
+// Situação do envio desta resposta (fila local → servidor).
+function SyncStatus({ localUuid, online }) {
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (!localUuid) return undefined;
+    let alive = true;
+    const refresh = () => answerStatus(localUuid).then((s) => { if (alive) setStatus(s); }).catch(() => {});
+    refresh();
+    const off = onSyncChange(refresh);
+    return () => { alive = false; off(); };
+  }, [localUuid]);
+
+  if (status === 'synced') {
+    return <p className="sync sync-ok" role="status"><Icon name="cloud-check" size={20} /> Resposta enviada. Obrigado por participar!</p>;
+  }
+  if (status === 'pending') {
+    return (
+      <div className="sync sync-pending" role="status">
+        <Icon name="clock" size={20} />
+        <span>
+          {online
+            ? 'Sua resposta está salva neste aparelho e está sendo enviada.'
+            : 'Sem internet agora. Sua resposta ficou salva neste aparelho e será enviada quando a conexão voltar, com esta página aberta.'}
+          {online && <button type="button" className="btn-link btn-inline" onClick={() => trySync()}>Tentar agora</button>}
+        </span>
+      </div>
+    );
+  }
+  return null;
 }

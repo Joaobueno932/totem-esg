@@ -22,6 +22,12 @@ export async function enqueueAnswer(payload) {
   await db.answers.put({ ...payload, status: 'pending' });
 }
 
+// 'pending' | 'synced' | null (não está na fila)
+export async function answerStatus(localUuid) {
+  const answer = await db.answers.get(localUuid);
+  return answer?.status || null;
+}
+
 export async function pendingCount() {
   return db.answers.where('status').equals('pending').count();
 }
