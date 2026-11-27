@@ -516,6 +516,8 @@ select.input {
   letter-spacing: -.03em; color: var(--g-900); font-variant-numeric: tabular-nums;
 }
 .result-unit { margin-left: .2em; font-size: .4em; font-weight: 700; letter-spacing: 0; color: var(--g-700); }
+/* lugar reservado enquanto o cartão da arte (carregado sob demanda) chega */
+.story-card-skeleton { height: calc(6.5rem * 16 / 9 + 24px); border-radius: 22px; background: linear-gradient(160deg, #e9f1ff, #eef8f2); }
 .section-title { font-size: 1rem; font-weight: 700; color: var(--g-900); }
 .summary { display: flex; flex-direction: column; gap: 10px; }
 .route { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--g-800); }

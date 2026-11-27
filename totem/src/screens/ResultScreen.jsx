@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Component, Suspense, lazy, useEffect, useState } from 'react';
 import Icon from '../components/Icon.jsx';
 import StepLayout from '../components/StepLayout.jsx';
 import { formatKg } from '../emissions/calc.js';
@@ -6,6 +6,19 @@ import { legDistanceText, legTitle } from '../flow.js';
 import { eventLink } from '../config.js';
 import { answerStatus } from '../db.js';
 import { onSyncChange, trySync } from '../sync.js';
+import { storyTemplateFor } from '../story/templates.js';
+
+// A arte para stories só existe em alguns eventos: o código e as imagens dela são
+// baixados sob demanda.
+const StoryCard = lazy(() => import('../story/StoryCard.jsx'));
+
+// Se a arte não carregar (ex.: sem internet antes de o app ficar em cache), o
+// resultado continua aparecendo — só o cartão some.
+class Optional extends Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? null : this.props.children; }
+}
 
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -39,6 +52,7 @@ export default function ResultScreen({ result, event, online, onFinish }) {
   const [copied, setCopied] = useState(false);
   const canShare = !!(navigator.share || navigator.clipboard?.writeText);
   const destination = [event.city, event.state].filter(Boolean).join('/');
+  const story = storyTemplateFor(event);
 
   // O texto compartilhado leva só a emissão e o link do evento — nada de nome, e-mail ou telefone.
   async function share() {
@@ -82,6 +96,14 @@ export default function ResultScreen({ result, event, online, onFinish }) {
           <span className="result-unit">kg CO₂e</span>
         </p>
       </div>
+
+      {story && (
+        <Optional>
+          <Suspense fallback={<div className="story-card-skeleton" aria-hidden="true" />}>
+            <StoryCard templateId={story.id} result={result} />
+          </Suspense>
+        </Optional>
+      )}
 
       <p className="note">
         <Icon name="info" size={20} />

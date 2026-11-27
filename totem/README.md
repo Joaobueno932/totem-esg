@@ -124,6 +124,27 @@ repositórios.
 - espelho das imagens base se o Docker Hub for bloqueado;
 - atualização da tag no repositório GitOps (padrão corporativo).
 
+## Arte para stories
+
+Eventos com arte própria ganham, na tela de resultado, um cartão "Arte para os
+stories": o participante põe uma foto (câmera ou galeria), ajusta arrastando ou
+pinçando e baixa ou compartilha um JPEG 1080×1920 com a sua distância e a sua emissão.
+Tudo é gerado no aparelho (canvas); a foto não vai para o servidor nem para o
+armazenamento local. Sem foto, a Eva comemorando ocupa o espaço.
+
+- O código fica em `src/story/` e só é baixado nos eventos que têm arte.
+- `src/story/templates.js` diz quais eventos têm arte, pelo slug. Hoje: os que contêm
+  `bonito-21k`.
+- Os km da arte são o deslocamento inteiro informado (ida e volta conta os dois
+  sentidos), a mesma distância usada na emissão.
+- A arte do Bonito 21K (`brand/arte-stories-bonito21k.png`) virou
+  `src/assets/story/bonito21k-base.webp`: sem os "000" e o "Sua foto aqui", com a área
+  da foto transparente. As medidas (janela da foto, posição e altura dos números) estão
+  em `src/story/bonito21k.js`.
+- Para outro evento: peça ao design a arte em PNG sem os textos de exemplo e com a área
+  da foto transparente, crie um arquivo como `bonito21k.js` com as medidas, registre em
+  `TEMPLATES` (`src/story/render.js`) e em `STORY_TEMPLATES`.
+
 ## Outros
 
 - `scripts/fetch-cities.mjs` regenera `src/data/cities.json` (municípios do IBGE com
@@ -133,7 +154,7 @@ repositórios.
   (cabeça ao quadril, todas na mesma escala: figura inteira com 760 px de altura,
   WebP qualidade 72). Ao trocar uma arte, gere o WebP com o mesmo recorte e atualize
   `width`/`height` em `src/components/Eva.jsx`.
-- A fonte Poppins (`src/assets/fonts`, licença SIL OFL) vai embutida no app para
-  funcionar offline; nada é carregado de CDN.
+- As fontes Poppins e Montserrat (`src/assets/fonts`, licença SIL OFL) vão embutidas no
+  app para funcionar offline; nada é carregado de CDN.
 - `netlify.toml` e `vercel.json` servem às hospedagens estáticas atuais e não são
   usados no Azure.
