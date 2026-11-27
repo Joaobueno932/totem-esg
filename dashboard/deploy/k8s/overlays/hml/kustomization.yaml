@@ -1,0 +1,24 @@
+# Homologação (branch dev). Valores __PREENCHER_*__ dependem da infraestrutura corporativa.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: __PREENCHER_NAMESPACE_HML__
+
+resources:
+  - ../../base
+
+images:
+  - name: totem-esg-dashboard
+    newName: __PREENCHER_ACR__.azurecr.io/totem-esg-dashboard
+    newTag: __PREENCHER_TAG__   # atualizada pelo processo GitOps a cada build da branch dev
+
+replicas:
+  - name: totem-esg-dashboard
+    count: 1
+
+configMapGenerator:
+  - name: totem-esg-dashboard-config
+    behavior: merge
+    literals:
+      # base pública do totem neste ambiente (links e QR codes dos eventos)
+      - TOTEM_PUBLIC_URL=__PREENCHER_URL_TOTEM_HML__

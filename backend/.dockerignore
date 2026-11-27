@@ -1,4 +1,24 @@
+# Contexto mínimo: o Dockerfile copia só o que a API usa em execução.
 node_modules
+npm-debug.log*
 .env
+.env.*
+!.env.example
 *.local
-npm-debug.log
+.git
+.gitignore
+.gitattributes
+.dockerignore
+Dockerfile
+docker-compose*.yml
+azure-pipelines.yml
+eslint.config.js
+openapi.yaml
+README.md
+coverage
+deploy
+docs
+test
+netlify
+netlify.toml
+public

@@ -3,15 +3,22 @@
 //
 // A URL da API é resolvida nesta ordem, para o link "simplesmente funcionar"
 // mesmo sem variável de build no totem:
-//   1) parâmetro ?api=... no link (o dashboard já embute a URL da API que ele usa);
+//   1) parâmetro ?api=... no link (o dashboard embute a URL da API quando ela tem
+//      endereço próprio, ex.: deploy no Netlify);
 //   2) valor guardado em cache (de um acesso anterior);
 //   3) VITE_API_URL do build;
-//   4) localhost (desenvolvimento).
+//   4) mesma origem: vazio = /api/... no próprio host do totem, encaminhado ao backend
+//      pelo nginx da imagem Docker (ou pelo proxy do Vite em desenvolvimento).
+// Com VITE_ALLOW_API_OVERRIDE=false (padrão da imagem Docker) os passos 1 e 2 são
+// ignorados: a API é fixa e um link adulterado não consegue desviar as respostas
+// (dados pessoais) para outro servidor.
 const BUILD_API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const ALLOW_API_OVERRIDE = import.meta.env.VITE_ALLOW_API_OVERRIDE !== 'false';
 const EVENT_CACHE_KEY = 'carbono-zero-event';
 const API_CACHE_KEY = 'carbono-zero-api-url';
 
 export function getApiUrl() {
+  if (!ALLOW_API_OVERRIDE) return BUILD_API;
   const fromUrl = new URLSearchParams(window.location.search).get('api');
   if (fromUrl) {
     try { localStorage.setItem(API_CACHE_KEY, fromUrl); } catch { /* storage cheio/bloqueado */ }
@@ -21,7 +28,7 @@ export function getApiUrl() {
     const cached = localStorage.getItem(API_CACHE_KEY);
     if (cached) return cached.replace(/\/$/, '');
   } catch { /* ignore */ }
-  return BUILD_API || 'http://localhost:3001';
+  return BUILD_API;
 }
 
 // /festa-junina → "festa-junina" (ignora barras, query e hash)

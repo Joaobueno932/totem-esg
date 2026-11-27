@@ -1,15 +1,25 @@
 // Cliente da API administrativa. O token JWT fica em sessionStorage
 // (expira ao fechar o navegador) e nunca é exposto em URLs.
-export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '');
+
+// Configuração de execução (public/config.js). Na imagem Docker o nginx gera esse
+// arquivo com as variáveis do contêiner: a mesma imagem serve qualquer ambiente.
+const RUNTIME = (typeof window !== 'undefined' && window.__APP_CONFIG__) || {};
+
+// URL base da API. Vazio = mesma origem: /api/... no próprio host do dashboard,
+// encaminhado ao backend pelo nginx da imagem (ou pelo proxy do Vite em dev).
+export const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 // Base do totem, usada para montar o link/QR de cada evento (base + '/' + slug).
-export const TOTEM_URL = (import.meta.env.VITE_TOTEM_URL || 'https://totem-esg-totem.netlify.app').replace(/\/$/, '');
+// O endereço do Netlify é o padrão legado; a imagem Docker exige TOTEM_PUBLIC_URL.
+export const TOTEM_URL = (RUNTIME.totemUrl || import.meta.env.VITE_TOTEM_URL || 'https://totem-esg-totem.netlify.app').replace(/\/$/, '');
 
-// Link do totem para um evento. Embute a URL da API (?api=) para o totem publicado
-// não depender de configuração própria — assim o link funciona já no primeiro acesso.
+// Link do totem para um evento. Quando a API tem endereço próprio e público, ele vai
+// no link (?api=) para o totem publicado não depender de configuração própria. Com a
+// API na mesma origem (proxy), cada aplicação usa o seu, e o link fica limpo.
 export function totemEventUrl(slug) {
   const base = `${TOTEM_URL}/${slug}`;
-  return /localhost/.test(API_URL) ? base : `${base}?api=${encodeURIComponent(API_URL)}`;
+  const embedApi = /^https?:\/\//i.test(API_URL) && !/localhost/.test(API_URL);
+  return embedApi ? `${base}?api=${encodeURIComponent(API_URL)}` : base;
 }
 
 export function getToken() {

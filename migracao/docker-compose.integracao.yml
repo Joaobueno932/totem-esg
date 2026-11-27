@@ -1,0 +1,72 @@
+# Sistema completo com as imagens de produção, para validar a separação localmente.
+# Mesmo desenho do Kubernetes: a API não tem porta publicada e só é alcançada pelo
+# proxy de cada frontend; os contêineres rodam sem root e com sistema de arquivos
+# somente leitura. Credenciais fixas de exemplo — use só na máquina local.
+#
+#   docker compose -f migracao/docker-compose.integracao.yml up -d --build
+#   totem:     http://localhost:8080/<slug-do-evento>
+#   dashboard: http://localhost:8081   (admin@evento.com / SenhaForte123)
+#   teste ponta a ponta pelo proxy do dashboard:
+#     API_URL=http://localhost:8081 node backend/scripts/e2e-test.mjs
+#   docker compose -f migracao/docker-compose.integracao.yml down -v
+name: totem-esg-integracao
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: carbono_zero
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d carbono_zero"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build: ../backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/carbono_zero
+      JWT_SECRET: somente-validacao-local
+      TRUST_PROXY: "1"   # só o nginx do frontend está à frente da API aqui
+      ADMIN_EMAIL: admin@evento.com
+      ADMIN_PASSWORD: SenhaForte123
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  totem:
+    build: ../totem
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:3001
+    ports:
+      - "${TOTEM_PORT:-8080}:8080"
+    read_only: true
+    # mode=1777: o tmpfs herdaria root 755 da imagem (no Kubernetes o emptyDir já é gravável)
+    tmpfs: ["/tmp:mode=1777", "/etc/nginx/conf.d:mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  dashboard:
+    build: ../dashboard
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:3001
+      TOTEM_PUBLIC_URL: http://localhost:${TOTEM_PORT:-8080}
+    ports:
+      - "${DASHBOARD_PORT:-8081}:8080"
+    read_only: true
+    # mode=1777: o tmpfs herdaria root 755 da imagem (no Kubernetes o emptyDir já é gravável)
+    tmpfs: ["/tmp:mode=1777", "/etc/nginx/conf.d:mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]

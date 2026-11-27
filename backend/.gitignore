@@ -1,0 +1,21 @@
+node_modules/
+coverage/
+npm-debug.log*
+
+# configuração local — use .env.example como modelo; segredos nunca no Git
+.env
+.env.*
+!.env.example
+*.local
+
+.DS_Store
+Thumbs.db
+
+# estado local de IDEs e assistentes de código
+.vscode/
+.idea/
+.claude/
+.cursor/
+.codex/
+.continue/
+.aider*

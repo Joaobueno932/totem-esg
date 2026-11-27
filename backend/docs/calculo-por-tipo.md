@@ -4,8 +4,8 @@ Este documento descreve **exatamente** a conta feita pelo sistema para cada
 tipo de deslocamento, com os fatores da versão **`1.0.0-2026.07`** e exemplos
 numéricos passo a passo.
 
-O motor de cálculo é o mesmo no totem (offline, [totem/src/emissions/calc.js](../totem/src/emissions/calc.js))
-e no servidor ([backend/src/services/emissions.js](../backend/src/services/emissions.js)).
+O motor de cálculo é o mesmo no totem (offline, `totem/src/emissions/calc.js`, no repositório frontend)
+e no servidor ([src/services/emissions.js](../src/services/emissions.js)).
 O servidor **recalcula** toda resposta recebida e o valor dele prevalece.
 
 ---
@@ -33,8 +33,8 @@ O resultado final é arredondado para **4 casas decimais**:
 emissão_final = round(emissão × 10000) / 10000
 ```
 
-Referência no código: [calc.js:34-51](../totem/src/emissions/calc.js#L34-L51) e
-[emissions.js:39-53](../backend/src/services/emissions.js#L39-L53).
+Referência no código: `totem/src/emissions/calc.js` (repositório frontend) e
+[emissions.js:39-53](../src/services/emissions.js#L39-L53).
 
 ---
 
@@ -50,7 +50,7 @@ emissão_individual = (distância_total × fator_do_combustível) ÷ nº_de_ocup
 
 > Se o combustível não for informado (ou não existir na base para aquele modal),
 > usa-se o fator `"outro"` do próprio modal como fallback conservador
-> ([emissions.js:27-31](../backend/src/services/emissions.js#L27-L31)).
+> ([emissions.js:27-31](../src/services/emissions.js#L27-L31)).
 
 ### Fatores (kg CO₂e/km)
 
@@ -145,7 +145,7 @@ emissão         = 500 × 0,158           = 79,0 kg CO₂e
 
 **Bicicleta / A pé** — deslocamento ativo, emissão direta considerada **zero**.
 O cálculo faz *short-circuit* antes de qualquer conta
-([calc.js:35](../totem/src/emissions/calc.js#L35)):
+(`totem/src/emissions/calc.js`, repositório frontend):
 
 ```
 emissão = 0   (independente de distância, ida/volta ou ocupantes)
@@ -158,7 +158,7 @@ emissão = 0   (independente de distância, ida/volta ou ocupantes)
 Ao sincronizar, o servidor **refaz a conta** com os fatores ativos e grava o
 valor dele. Se o valor enviado pelo cliente divergir em **mais de 0,5 kg**, a
 resposta é marcada como `recalculated` em `sync_logs`
-([sync.js:87-109](../backend/src/routes/sync.js#L87-L109)):
+([sync.js:87-109](../src/routes/sync.js#L87-L109)):
 
 ```
 mismatch = | emissão_servidor − emissão_cliente | > 0,5 kg
@@ -173,7 +173,7 @@ rastreabilidade histórica dos números.
 ## 6. Agregações do dashboard / relatório
 
 Sobre o conjunto de respostas de um evento
-([admin.js:110-134](../backend/src/routes/admin.js#L110-L134)):
+([admin.js:110-134](../src/routes/admin.js#L110-L134)):
 
 ```
 total_co2e    = Σ emissão de todas as respostas
@@ -191,7 +191,7 @@ por_modal     = Σ emissão agrupada por transport_mode
 163,14 kg CO₂ é a absorção média estimada de **uma árvore nativa da Mata
 Atlântica ao longo de ~20 anos**. Usa-se `Math.ceil` (arredonda **para cima**),
 pois neutralizar exige plantar a árvore inteira
-([admin.js:133](../backend/src/routes/admin.js#L133)).
+([admin.js:133](../src/routes/admin.js#L133)).
 
 ### Exemplo E — Evento com 3 participantes
 
@@ -224,5 +224,5 @@ Fontes primárias dos fatores: Programa Brasileiro GHG Protocol (FGV/MCTI) para
 combustíveis; DEFRA UK *GHG Conversion Factors 2023* para fatores por
 passageiro-km. Metodologia inspirada na calculadora pública da Fundação SOS
 Mata Atlântica. Ver [docs/metodologia.md](metodologia.md) e
-[backend/seeds/emission_factors.json](../backend/seeds/emission_factors.json)
+[seeds/emission_factors.json](../seeds/emission_factors.json)
 (fonte da verdade, com fonte documentada por fator).

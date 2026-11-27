@@ -1,0 +1,100 @@
+# CI/CD do totem (PWA) no Azure DevOps — pipeline próprio dentro do repositório frontend.
+# Fluxo: dependências → lint → testes → build → imagem Docker → Azure Container Registry.
+# A implantação no Kubernetes é feita pelo Argo CD (GitOps); este pipeline não acessa o cluster.
+#
+# Ao criar o pipeline no Azure DevOps, aponte para este arquivo (totem/azure-pipelines.yml).
+# Antes do primeiro uso, substitua os valores __PREENCHER_*__ (ver README do totem,
+# seção "Azure DevOps"). Enquanto estiverem assim, a execução falha de propósito.
+
+trigger:
+  branches:
+    include: [dev, main]
+  paths:
+    include: [totem]
+
+pr:
+  branches:
+    include: [dev, main]
+  paths:
+    include: [totem]
+
+variables:
+  nodeVersion: '24.x'
+  appDir: totem
+  # Service connection do tipo "Docker Registry" apontando para o ACR.
+  acrServiceConnection: '__PREENCHER_SERVICE_CONNECTION_ACR__'
+  imageRepository: 'totem-esg-totem'
+  isPullRequest: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+# Agente hospedado pela Microsoft. Troque pelo pool corporativo, se houver (pool: name: ...).
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: CI
+    displayName: Lint, testes e build
+    jobs:
+      - job: verificar
+        displayName: Lint, testes e build
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: $(nodeVersion)
+          - script: npm ci
+            displayName: Instalar dependências
+            workingDirectory: $(appDir)
+          - script: npm run lint
+            displayName: Lint
+            workingDirectory: $(appDir)
+          - script: npm test
+            displayName: Testes
+            workingDirectory: $(appDir)
+          - script: npm run build
+            displayName: Build de produção
+            workingDirectory: $(appDir)
+          - script: npm audit --omit=dev --audit-level=high
+            displayName: Auditoria de dependências (informativa)
+            workingDirectory: $(appDir)
+            continueOnError: true
+
+  - stage: Imagem
+    displayName: Imagem Docker
+    dependsOn: CI
+    jobs:
+      - job: docker
+        displayName: Build e publicação
+        steps:
+          - bash: |
+              version=$(node -p "require('./$(appDir)/package.json').version")
+              sha=$(echo "$(Build.SourceVersion)" | cut -c1-7)
+              echo "##vso[task.setvariable variable=imageTag]${version}-$(Build.SourceBranchName).$(Build.BuildId)"
+              echo "##vso[task.setvariable variable=shaTag]sha-${sha}"
+            displayName: Definir tags da imagem
+
+          # PR: só valida que a imagem compila (nada é publicado).
+          - task: Docker@2
+            displayName: Build da imagem (validação)
+            condition: and(succeeded(), eq(variables.isPullRequest, true))
+            inputs:
+              command: build
+              repository: $(imageRepository)
+              Dockerfile: $(appDir)/Dockerfile
+              buildContext: $(appDir)
+              tags: $(imageTag)
+
+          # dev → homologação, main → produção: a mesma imagem é promovida pelo GitOps.
+          - task: Docker@2
+            displayName: Build e push para o ACR
+            condition: and(succeeded(), eq(variables.isPullRequest, false))
+            inputs:
+              command: buildAndPush
+              containerRegistry: ${{ variables.acrServiceConnection }}
+              repository: $(imageRepository)
+              Dockerfile: $(appDir)/Dockerfile
+              buildContext: $(appDir)
+              tags: |
+                $(imageTag)
+                $(shaTag)
+
+          # Atualização do repositório GitOps (tag da imagem no overlay do ambiente):
+          # depende do padrão corporativo. Ver README do totem, seção "Kubernetes e Argo CD".

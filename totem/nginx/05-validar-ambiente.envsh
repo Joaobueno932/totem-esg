@@ -1,0 +1,28 @@
+#!/bin/sh
+# Valida e normaliza BACKEND_URL antes do envsubst do template do nginx.
+# O entrypoint da imagem oficial carrega os *.envsh deste diretório com "source":
+# não altere opções do shell aqui (set -e/-u valeriam para os scripts seguintes).
+
+if [ -z "${BACKEND_URL:-}" ]; then
+  echo "ERRO: defina BACKEND_URL com o endereço interno da API, sem caminho (ex.: http://totem-esg-backend)." >&2
+  exit 1
+fi
+
+BACKEND_URL="${BACKEND_URL%/}"
+case "$BACKEND_URL" in
+  http://*|https://*) ;;
+  *) echo "ERRO: BACKEND_URL deve começar com http:// ou https:// (recebido: $BACKEND_URL)." >&2; exit 1 ;;
+esac
+case "${BACKEND_URL#*://}" in
+  */*) echo "ERRO: BACKEND_URL não deve ter caminho — o nginx repassa o /api/... original (recebido: $BACKEND_URL)." >&2; exit 1 ;;
+esac
+
+export BACKEND_URL
+
+# Sem poder gravar a configuração gerada, o entrypoint só registra o erro e o nginx
+# subiria sem o site: falhar aqui deixa o problema visível (ex.: volume sem permissão).
+conf_dir="${NGINX_ENVSUBST_OUTPUT_DIR:-/etc/nginx/conf.d}"
+if [ ! -w "$conf_dir" ]; then
+  echo "ERRO: $conf_dir não é gravável pelo usuário $(id -u) — a configuração do nginx não pode ser gerada." >&2
+  exit 1
+fi

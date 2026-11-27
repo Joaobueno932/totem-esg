@@ -1,0 +1,892 @@
+openapi: 3.0.3
+info:
+  title: API Pegada de Carbono
+  version: 1.0.0
+  description: |
+    Contrato da API consumida pelo totem (rotas públicas) e pelo dashboard (rotas
+    administrativas). Gerado a partir de `src/routes/*`; mantenha os dois em sincronia.
+
+    Autenticação das rotas `/api/admin/*` (exceto login): `Authorization: Bearer <token>`,
+    com o JWT devolvido por `POST /api/admin/login`. Papéis: `admin` (tudo),
+    `organizador` (gerencia eventos e respostas), `viewer` (só consulta).
+
+    Erros seguem `{ "error": "mensagem" }`. Rotas `/api/sync` e `/api/public` têm rate
+    limit por IP (`SYNC_RATE_LIMIT` por 15 min); o login, 20 tentativas por 15 min.
+servers:
+  - url: /
+    description: Mesma origem (proxy do frontend) ou URL da API
+
+tags:
+  - name: Sondas
+  - name: Totem
+    description: Rotas públicas usadas pelo totem
+  - name: Autenticação
+  - name: Eventos
+  - name: Respostas
+  - name: Indicadores
+  - name: Usuários
+
+paths:
+  /api/health:
+    get:
+      tags: [Sondas]
+      summary: Vivacidade (não consulta o banco)
+      responses:
+        '200':
+          description: Processo ativo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  time: { type: string, format: date-time }
+
+  /api/ready:
+    get:
+      tags: [Sondas]
+      summary: Prontidão (consulta o banco)
+      responses:
+        '200':
+          description: Banco acessível
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '503':
+          description: Banco indisponível
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/public/events/{slug}:
+    get:
+      tags: [Totem]
+      summary: Evento pelo slug do link/QR
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, example: festa-junina-2026 }
+      responses:
+        '200':
+          description: Evento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicEvent' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/sync/answers:
+    post:
+      tags: [Totem]
+      summary: Recebe um lote de respostas do totem
+      description: |
+        Idempotente por `local_uuid`: reenvios voltam `ok` com `duplicate: true`.
+        O servidor recalcula a emissão de cada trecho com os fatores ativos e o valor
+        dele prevalece. Erros de validação vêm por item (`status: error`), com HTTP 200.
+        O formato antigo `{ transport: {...} }` (um único trecho) ainda é aceito.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/SyncAnswer' }
+      responses:
+        '200':
+          description: Resultado por resposta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/SyncResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/sync/factors:
+    get:
+      tags: [Totem]
+      summary: Fatores de emissão ativos
+      responses:
+        '200':
+          description: Versão e fatores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string, nullable: true, example: 1.0.0-2026.07 }
+                  factors:
+                    type: array
+                    items: { $ref: '#/components/schemas/ActiveFactor' }
+
+  /api/admin/login:
+    post:
+      tags: [Autenticação]
+      summary: Login do painel
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: Token JWT (expira conforme JWT_EXPIRES_IN)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  admin: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/admin/events:
+    get:
+      tags: [Eventos]
+      summary: Lista eventos (sem a imagem; expõe has_image)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Event'
+                    - type: object
+                      properties:
+                        answers_count: { type: integer }
+                        total_co2e: { type: number }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Eventos]
+      summary: Cria evento (admin ou organizador)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '201':
+          description: Evento criado (slug gerado a partir do nome, fixo depois)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/admin/events/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Eventos]
+      summary: Atualiza evento (admin ou organizador)
+      description: '`image_data` ausente mantém a imagem; `null` remove; string substitui.'
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '200':
+          description: Evento atualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Eventos]
+      summary: Exclui evento e, em cascata, participantes e respostas
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Excluído
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/admin/events/{id}/report:
+    get:
+      tags: [Indicadores]
+      summary: Relatório de um evento (rota legada; equivale a /api/admin/report?event_id=)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/City'
+        - $ref: '#/components/parameters/State'
+        - $ref: '#/components/parameters/Mode'
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Relatório
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/admin/leads:
+    get:
+      tags: [Respostas]
+      summary: Leads — um por participante (até 5000)
+      security: [{ bearerAuth: [] }]
+      parameters: &filters
+        - $ref: '#/components/parameters/EventId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/City'
+        - $ref: '#/components/parameters/State'
+        - $ref: '#/components/parameters/Mode'
+        - $ref: '#/components/parameters/Company'
+      responses:
+        '200':
+          description: Leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Lead' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/answers:
+    get:
+      tags: [Respostas]
+      summary: Respostas — uma linha por trecho (até 5000)
+      security: [{ bearerAuth: [] }]
+      parameters: *filters
+      responses:
+        '200':
+          description: Trechos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AnswerLeg' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/answers/delete:
+    post:
+      tags: [Respostas]
+      summary: Exclui respostas inteiras (admin ou organizador)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [local_uuids]
+              properties:
+                local_uuids:
+                  type: array
+                  minItems: 1
+                  maxItems: 5000
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Quantidade de participantes removidos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/admin/stats:
+    get:
+      tags: [Indicadores]
+      summary: Indicadores do painel
+      security: [{ bearerAuth: [] }]
+      parameters: *filters
+      responses:
+        '200':
+          description: Totais, distribuição por modal/cidade/empresa e ranking
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Stats' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/report:
+    get:
+      tags: [Indicadores]
+      summary: Relatório consolidado (sem event_id cobre todos os eventos do recorte)
+      security: [{ bearerAuth: [] }]
+      parameters: *filters
+      responses:
+        '200':
+          description: Relatório
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Report' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/admin/export/leads.csv:
+    get:
+      tags: [Respostas]
+      summary: Exporta leads em CSV (separador ;, UTF-8 com BOM)
+      security: [{ bearerAuth: [] }]
+      parameters: *filters
+      responses:
+        '200':
+          description: Arquivo CSV
+          content:
+            text/csv:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/sync-logs:
+    get:
+      tags: [Respostas]
+      summary: Últimos 500 registros de sincronização
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [ok, duplicate, error, recalculated] }
+      responses:
+        '200':
+          description: Registros
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SyncLog' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/factors:
+    get:
+      tags: [Indicadores]
+      summary: Todos os fatores de emissão (ativos e históricos)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Fatores
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Factor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/admin/users:
+    get:
+      tags: [Usuários]
+      summary: Lista usuários (somente admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Usuários]
+      summary: Cria usuário (somente admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, maxLength: 200 }
+                email: { type: string, format: email, maxLength: 200 }
+                password: { type: string, minLength: 8, maxLength: 200 }
+                role: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/admin/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Usuários]
+      summary: Atualiza nome, papel ou senha (somente admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                role: { $ref: '#/components/schemas/Role' }
+                password: { type: string, minLength: 8, maxLength: 200 }
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Usuários]
+      summary: Remove usuário (somente admin; não remove a si mesmo nem o último admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Removido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    EventId:
+      name: event_id
+      in: query
+      schema: { type: integer }
+    From:
+      name: from
+      in: query
+      description: Data inicial (inclusiva) da resposta
+      schema: { type: string, format: date }
+    To:
+      name: to
+      in: query
+      description: Data final (inclusiva) da resposta
+      schema: { type: string, format: date }
+    City:
+      name: city
+      in: query
+      description: Trecho do nome da cidade do participante
+      schema: { type: string }
+    State:
+      name: state
+      in: query
+      schema: { type: string, minLength: 2, maxLength: 2 }
+    Mode:
+      name: mode
+      in: query
+      schema: { $ref: '#/components/schemas/TransportMode' }
+    Company:
+      name: company
+      in: query
+      description: Trecho do nome da empresa do participante
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Dados inválidos
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Token ausente, inválido ou expirado (ou credenciais inválidas no login)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Papel sem permissão
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Não encontrado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflito (e-mail já usado, último admin, remover a si mesmo)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Limite de requisições atingido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Ok:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        details:
+          type: array
+          description: Problemas de validação (zod), quando houver
+          items: { type: object }
+
+    Role:
+      type: string
+      enum: [admin, organizador, viewer]
+      default: viewer
+
+    TransportMode:
+      type: string
+      enum: [carro, moto, onibus, van, aplicativo_taxi, aviao, bicicleta_pe, outro]
+
+    FuelType:
+      type: string
+      enum: [gasolina, etanol, diesel, gnv, flex, outro]
+
+    PublicEvent:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        location: { type: string, nullable: true }
+        venue: { type: string, nullable: true }
+        start_date: { type: string, format: date, nullable: true }
+        end_date: { type: string, format: date, nullable: true }
+        description: { type: string, nullable: true }
+        organizer_name: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        image:
+          type: string
+          nullable: true
+          description: Data URL base64 (PNG/JPG/WebP)
+
+    EventInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        location: { type: string, maxLength: 300, nullable: true }
+        start_date: { type: string, format: date, nullable: true }
+        end_date: { type: string, format: date, nullable: true }
+        description: { type: string, maxLength: 2000, nullable: true }
+        organizer_name: { type: string, maxLength: 200, nullable: true }
+        contact_email: { type: string, maxLength: 200, nullable: true }
+        contact_phone: { type: string, maxLength: 40, nullable: true }
+        cep: { type: string, maxLength: 9, nullable: true }
+        venue: { type: string, maxLength: 200, nullable: true }
+        city: { type: string, maxLength: 120, nullable: true }
+        state: { type: string, maxLength: 2, nullable: true }
+        expected_attendees: { type: integer, minimum: 0, nullable: true }
+        image_data:
+          type: string
+          nullable: true
+          description: 'data:image/(png|jpeg|webp);base64,... até 1,5 MB decodificados'
+
+    Event:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        location: { type: string, nullable: true }
+        start_date: { type: string, format: date, nullable: true }
+        end_date: { type: string, format: date, nullable: true }
+        description: { type: string, nullable: true }
+        organizer_name: { type: string, nullable: true }
+        contact_email: { type: string, nullable: true }
+        contact_phone: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        cep: { type: string, nullable: true }
+        venue: { type: string, nullable: true }
+        expected_attendees: { type: integer, nullable: true }
+        has_image: { type: boolean }
+        image_updated_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TransportLegInput:
+      type: object
+      required: [transport_mode, distance_km, round_trip, emission_kg_co2e, calculation_version]
+      properties:
+        transport_mode: { $ref: '#/components/schemas/TransportMode' }
+        fuel_type:
+          allOf: [{ $ref: '#/components/schemas/FuelType' }]
+          nullable: true
+        origin_text: { type: string, maxLength: 300, nullable: true }
+        distance_km: { type: number, minimum: 0, maximum: 50000 }
+        round_trip: { type: boolean }
+        passengers_in_vehicle: { type: integer, minimum: 1, maximum: 80, default: 1 }
+        emission_kg_co2e:
+          type: number
+          minimum: 0
+          description: Calculado no totem; o servidor recalcula e o valor dele prevalece
+        calculation_version: { type: string, maxLength: 50 }
+
+    SyncAnswer:
+      type: object
+      required: [local_uuid, event_id, participant, transports]
+      properties:
+        local_uuid: { type: string, format: uuid }
+        event_id: { type: integer, minimum: 1 }
+        answered_at: { type: string, format: date-time, nullable: true }
+        participant:
+          type: object
+          required: [name, email, consent_lgpd]
+          properties:
+            name: { type: string, minLength: 1, maxLength: 200 }
+            company: { type: string, maxLength: 200, nullable: true }
+            email: { type: string, format: email, maxLength: 200 }
+            phone: { type: string, maxLength: 40, nullable: true }
+            city: { type: string, maxLength: 120, nullable: true }
+            state: { type: string, maxLength: 2, nullable: true }
+            consent_lgpd:
+              type: boolean
+              enum: [true]
+              description: Consentimento LGPD obrigatório
+            consent_marketing: { type: boolean, default: false }
+        transports:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: { $ref: '#/components/schemas/TransportLegInput' }
+
+    SyncResult:
+      type: object
+      properties:
+        local_uuid: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [ok, error] }
+        duplicate: { type: boolean }
+        emission_kg_co2e: { type: number }
+        legs: { type: integer }
+        message: { type: string }
+
+    ActiveFactor:
+      type: object
+      properties:
+        mode: { $ref: '#/components/schemas/TransportMode' }
+        fuel_type: { type: string, nullable: true }
+        factor_kg_co2e_per_km: { type: string, description: NUMERIC do PostgreSQL }
+        factor_basis: { type: string, enum: [vehicle, passenger] }
+        version: { type: string }
+
+    Factor:
+      allOf:
+        - $ref: '#/components/schemas/ActiveFactor'
+        - type: object
+          properties:
+            id: { type: integer }
+            source: { type: string }
+            source_url: { type: string, nullable: true }
+            active: { type: boolean }
+            created_at: { type: string, format: date-time }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        created_at: { type: string, format: date-time }
+
+    Lead:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        company: { type: string, nullable: true }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        consent_lgpd: { type: boolean }
+        consent_marketing: { type: boolean }
+        created_at: { type: string, format: date-time }
+        transport_modes:
+          type: array
+          items: { $ref: '#/components/schemas/TransportMode' }
+        emission_kg_co2e: { type: number }
+        event_name: { type: string }
+
+    AnswerLeg:
+      type: object
+      properties:
+        id: { type: integer }
+        local_uuid: { type: string, format: uuid }
+        leg_index: { type: integer }
+        legs_count: { type: integer }
+        transport_mode: { $ref: '#/components/schemas/TransportMode' }
+        fuel_type: { type: string, nullable: true }
+        origin_text: { type: string, nullable: true }
+        distance_km: { type: number }
+        round_trip: { type: boolean }
+        passengers_in_vehicle: { type: integer }
+        emission_kg_co2e: { type: number }
+        calculation_version: { type: string }
+        answered_at: { type: string, format: date-time, nullable: true }
+        synced_at: { type: string, format: date-time }
+        participant_name: { type: string }
+        company: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        event_name: { type: string }
+
+    ModeBreakdown:
+      type: object
+      properties:
+        mode: { $ref: '#/components/schemas/TransportMode' }
+        participants: { type: integer }
+        co2e: { type: number }
+
+    CityBreakdown:
+      type: object
+      properties:
+        city: { type: string }
+        participants: { type: integer }
+
+    CompanyBreakdown:
+      type: object
+      properties:
+        company: { type: string }
+        participants: { type: integer }
+
+    Stats:
+      type: object
+      properties:
+        totals:
+          type: object
+          properties:
+            participants: { type: integer }
+            leads: { type: integer }
+            marketing_leads: { type: integer }
+            total_co2e: { type: number }
+            avg_co2e: { type: number }
+            trees_needed: { type: integer }
+            trees_kg_per_tree: { type: number }
+        by_mode:
+          type: array
+          items: { $ref: '#/components/schemas/ModeBreakdown' }
+        by_city:
+          type: array
+          items: { $ref: '#/components/schemas/CityBreakdown' }
+        by_company:
+          type: array
+          items: { $ref: '#/components/schemas/CompanyBreakdown' }
+        ranking:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              company: { type: string, nullable: true }
+              city: { type: string, nullable: true }
+              transport_modes:
+                type: array
+                items: { $ref: '#/components/schemas/TransportMode' }
+              emission_kg_co2e: { type: number }
+
+    Report:
+      type: object
+      properties:
+        event:
+          allOf: [{ $ref: '#/components/schemas/Event' }]
+          nullable: true
+        by_event:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              participants: { type: integer }
+              co2e: { type: number }
+        filters:
+          type: object
+          additionalProperties: true
+        generated_at: { type: string, format: date-time }
+        totals:
+          type: object
+          properties:
+            participants: { type: integer }
+            valid_answers: { type: integer }
+            transport_legs: { type: integer }
+            total_co2e: { type: number }
+            avg_co2e: { type: number }
+            trees_needed: { type: integer }
+        by_mode:
+          type: array
+          items: { $ref: '#/components/schemas/ModeBreakdown' }
+        by_city:
+          type: array
+          items: { $ref: '#/components/schemas/CityBreakdown' }
+        by_company:
+          type: array
+          items: { $ref: '#/components/schemas/CompanyBreakdown' }
+        calculation_versions:
+          type: array
+          items: { type: string }
+        methodology_note: { type: string }
+
+    SyncLog:
+      type: object
+      properties:
+        id: { type: integer }
+        local_uuid: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [ok, duplicate, error, recalculated] }
+        error_message: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }

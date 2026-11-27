@@ -51,7 +51,7 @@ export async function runMigrations({ log = () => {} } = {}) {
         log(`✓ ${file}`);
       } catch (err) {
         await client.query('ROLLBACK');
-        throw new Error(`Migration ${file} falhou: ${err.message}`);
+        throw new Error(`Migration ${file} falhou: ${err.message}`, { cause: err });
       }
     }
   } finally {

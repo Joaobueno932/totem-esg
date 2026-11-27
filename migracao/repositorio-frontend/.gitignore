@@ -1,0 +1,26 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+npm-debug.log*
+
+# configuração local — use o .env.example de cada aplicação como modelo
+.env
+.env.*
+!.env.example
+*.local
+
+# PDFs de relatório gerados localmente
+*.pdf
+
+.DS_Store
+Thumbs.db
+
+# estado local de IDEs e assistentes de código
+.vscode/
+.idea/
+.claude/
+.cursor/
+.codex/
+.continue/
+.aider*

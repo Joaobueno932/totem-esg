@@ -2,7 +2,7 @@
 
 Documento enxuto com **apenas** (1) os **links das referências** usadas e (2) o
 **cálculo aplicado em cada fator** de emissão. Versão dos fatores:
-**`1.0.0-2026.07`**. Fonte da verdade: [backend/seeds/emission_factors.json](../backend/seeds/emission_factors.json).
+**`1.0.0-2026.07`**. Fonte da verdade: [seeds/emission_factors.json](../seeds/emission_factors.json).
 
 ---
 

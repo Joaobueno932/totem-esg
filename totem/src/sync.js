@@ -18,8 +18,7 @@ function notify() {
 
 export async function trySync() {
   if (syncing || !navigator.onLine) return;
-  const apiUrl = getApiUrl();
-  if (!apiUrl) return;
+  const apiUrl = getApiUrl(); // '' = mesma origem
 
   syncing = true;
   try {

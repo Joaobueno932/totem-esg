@@ -1,0 +1,23 @@
+# Produção (branch main). Valores __PREENCHER_*__ dependem da infraestrutura corporativa.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: __PREENCHER_NAMESPACE_PRD__
+
+resources:
+  - ../../base
+
+images:
+  - name: totem-esg-backend
+    newName: __PREENCHER_ACR__.azurecr.io/totem-esg-backend
+    newTag: __PREENCHER_TAG__   # atualizada pelo processo GitOps a cada build da branch main
+
+replicas:
+  - name: totem-esg-backend
+    count: 2
+
+configMapGenerator:
+  - name: totem-esg-backend-config
+    behavior: merge
+    literals:
+      - CORS_ORIGINS=__PREENCHER_URL_DASHBOARD_PRD__

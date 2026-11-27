@@ -1,0 +1,25 @@
+# Manifests de REFERÊNCIA da API (Kustomize). Se o padrão corporativo for Helm ou
+# outro layout de GitOps, use estes arquivos só como especificação dos requisitos.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: totem-esg
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+# Configuração não sensível. Os segredos (DATABASE_URL, JWT_SECRET e, só para criar o
+# primeiro acesso, ADMIN_EMAIL/ADMIN_PASSWORD) ficam no Secret "totem-esg-backend-secrets",
+# provisionado fora deste repositório (Key Vault + External Secrets/CSI, conforme padrão).
+configMapGenerator:
+  - name: totem-esg-backend-config
+    literals:
+      - PORT=3001
+      - JWT_EXPIRES_IN=8h
+      - SYNC_RATE_LIMIT=300
+      # ingress + nginx do frontend; ajuste ao nº real de proxies à frente da API
+      - TRUST_PROXY=2

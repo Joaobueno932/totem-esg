@@ -1,0 +1,19 @@
+# Manifests de REFERÊNCIA do totem (Kustomize). Se o padrão corporativo for Helm ou
+# outro layout de GitOps, use estes arquivos só como especificação dos requisitos.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: totem-esg
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: totem-esg-totem-config
+    literals:
+      # Service da API no mesmo namespace (em outro: http://<svc>.<namespace>.svc.cluster.local)
+      - BACKEND_URL=http://totem-esg-backend

@@ -1,0 +1,126 @@
+# CI/CD do backend (API) no Azure DevOps.
+# Fluxo: dependências → lint → testes unitários → testes ponta a ponta (API + PostgreSQL)
+#        → imagem Docker → Azure Container Registry.
+# A implantação no Kubernetes é feita pelo Argo CD (GitOps); este pipeline não acessa o cluster.
+#
+# Antes do primeiro uso, substitua os valores __PREENCHER_*__ (dependem da infraestrutura
+# corporativa — ver README, seção "Azure DevOps"). Enquanto estiverem assim, a execução
+# falha de propósito: a service connection referenciada não existe.
+
+trigger:
+  branches:
+    include: [dev, main]
+
+pr:
+  branches:
+    include: [dev, main]
+
+variables:
+  nodeVersion: '24.x'
+  # Service connection do tipo "Docker Registry" apontando para o ACR.
+  acrServiceConnection: '__PREENCHER_SERVICE_CONNECTION_ACR__'
+  imageRepository: 'totem-esg-backend'
+  isPullRequest: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+# Agente hospedado pela Microsoft. Troque pelo pool corporativo, se houver (pool: name: ...).
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  containers:
+    - container: postgres
+      image: postgres:16-alpine   # em rede sem Docker Hub, use o espelho do ACR
+      ports:
+        - 5432:5432
+      env:
+        POSTGRES_DB: carbono_zero
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+
+stages:
+  - stage: CI
+    displayName: Lint e testes
+    jobs:
+      - job: verificar
+        displayName: Lint e testes unitários
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: $(nodeVersion)
+          - script: npm ci
+            displayName: Instalar dependências
+          - script: npm run lint
+            displayName: Lint
+          - script: npm test
+            displayName: Testes unitários
+          - script: npm audit --omit=dev --audit-level=high
+            displayName: Auditoria de dependências (informativa)
+            continueOnError: true
+
+      - job: e2e
+        displayName: Testes ponta a ponta
+        services:
+          postgres: postgres
+        variables:
+          # banco descartável do próprio job — nenhum dado ou segredo real
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/carbono_zero
+          JWT_SECRET: somente-para-o-ci
+          PORT: '3001'
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: $(nodeVersion)
+          - script: npm ci
+            displayName: Instalar dependências
+          - script: |
+              npm run migrate
+              npm run seed
+              npm run create-admin admin@evento.com "SenhaForte123" "Admin Teste"
+            displayName: Preparar banco de teste
+          - script: |
+              node src/server.js &
+              npm run test:e2e
+            displayName: Testes ponta a ponta
+
+  - stage: Imagem
+    displayName: Imagem Docker
+    dependsOn: CI
+    jobs:
+      - job: docker
+        displayName: Build e publicação
+        steps:
+          - bash: |
+              version=$(node -p "require('./package.json').version")
+              sha=$(echo "$(Build.SourceVersion)" | cut -c1-7)
+              echo "##vso[task.setvariable variable=imageTag]${version}-$(Build.SourceBranchName).$(Build.BuildId)"
+              echo "##vso[task.setvariable variable=shaTag]sha-${sha}"
+            displayName: Definir tags da imagem
+
+          # PR: só valida que a imagem compila (nada é publicado).
+          - task: Docker@2
+            displayName: Build da imagem (validação)
+            condition: and(succeeded(), eq(variables.isPullRequest, true))
+            inputs:
+              command: build
+              repository: $(imageRepository)
+              Dockerfile: Dockerfile
+              buildContext: .
+              tags: $(imageTag)
+
+          # dev → homologação, main → produção: a mesma imagem é promovida pelo GitOps.
+          - task: Docker@2
+            displayName: Build e push para o ACR
+            condition: and(succeeded(), eq(variables.isPullRequest, false))
+            inputs:
+              command: buildAndPush
+              containerRegistry: ${{ variables.acrServiceConnection }}
+              repository: $(imageRepository)
+              Dockerfile: Dockerfile
+              buildContext: .
+              tags: |
+                $(imageTag)
+                $(shaTag)
+
+          # Atualização do repositório GitOps (tag da imagem no overlay do ambiente):
+          # depende do padrão corporativo (Argo CD Image Updater, PR automático no
+          # repositório de manifests etc.). Ver README, seção "Kubernetes e Argo CD".

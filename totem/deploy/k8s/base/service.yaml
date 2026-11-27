@@ -1,0 +1,17 @@
+# Exposto ao público pelo ingress/gateway corporativo (fora destes manifests), com HTTPS:
+# Service Worker e PWA só funcionam em origem segura.
+apiVersion: v1
+kind: Service
+metadata:
+  name: totem-esg-totem
+  labels:
+    app.kubernetes.io/name: totem-esg-totem
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: totem-esg-totem
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

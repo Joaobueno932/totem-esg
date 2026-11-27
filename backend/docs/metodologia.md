@@ -54,10 +54,10 @@ Cada fator tem uma **base** (`factor_basis`):
 
 ## Versionamento dos fatores
 
-- Os fatores ficam em `backend/seeds/emission_factors.json` (fonte da verdade,
+- Os fatores ficam em `seeds/emission_factors.json` (fonte da verdade,
   com fonte documentada por fator) e são carregados na tabela
   `emission_factors` pelo seed. Uma cópia embarcada no totem
-  (`totem/src/emissions/factors.json`) permite o cálculo 100% offline.
+  (`totem/src/emissions/factors.json`, no repositório frontend) permite o cálculo 100% offline.
 - Cada conjunto tem uma versão (atual: **`1.0.0-2026.07`**). Toda resposta
   grava em `transport_answers.calculation_version` a versão usada — os números
   de qualquer relatório são sempre rastreáveis ao conjunto de fatores da época.

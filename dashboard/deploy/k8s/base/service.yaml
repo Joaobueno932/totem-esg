@@ -1,0 +1,17 @@
+# Exposto pelo ingress/gateway corporativo (fora destes manifests), com HTTPS. Sendo o
+# painel administrativo, avalie publicá-lo só na rede interna/VPN.
+apiVersion: v1
+kind: Service
+metadata:
+  name: totem-esg-dashboard
+  labels:
+    app.kubernetes.io/name: totem-esg-dashboard
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: totem-esg-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

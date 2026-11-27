@@ -1,0 +1,16 @@
+# Interno ao cluster: o navegador chega à API pelo proxy do nginx de cada frontend.
+apiVersion: v1
+kind: Service
+metadata:
+  name: totem-esg-backend
+  labels:
+    app.kubernetes.io/name: totem-esg-backend
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: totem-esg-backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
